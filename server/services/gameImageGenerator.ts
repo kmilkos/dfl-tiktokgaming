@@ -8,88 +8,233 @@ import { getGameProfile } from '../data/games.js';
 
 const httpsAgent = new https.Agent({ family: 4, keepAlive: true });
 
+export type ImageStyleMode = 'infographic' | 'cinematic';
+
 export interface GameImageGenParams {
   prompt: string;
   gameId?: string;
+  styleMode?: ImageStyleMode;
   enhanceWithAI?: boolean;
   model?: 'flux' | 'turbo' | 'unity';
   aspectRatio?: '9:16' | '16:9' | '1:1';
 }
 
-const GAME_STYLE_ANCHORS: Record<string, string> = {
-  satisfactory: 'Satisfactory video game aesthetic, Unreal Engine 5 high fidelity render, industrial sci-fi mega factory, pristine orange power lines, glowing conveyor belts, towering space elevator in background, alien planet landscape, dramatic cinematic lighting, photorealistic 8k, 9:16 vertical composition',
-  enshrouded: 'Enshrouded video game aesthetic, Embervale dark fantasy voxel world, ancient stone ruins surrounded by swirling blue glowing Shroud mist, volumetric godrays, glowing flame altar, dark atmospheric mystery, cinematic 8k, 9:16 vertical composition',
-  valheim: 'Valheim Norse survival aesthetic, ancient Viking longhouse fortress with heavy wood beams, glowing green torches, stormy dark ocean with glowing sea serpent, dramatic Norse mythology atmosphere, photorealistic stylized lighting, 9:16 vertical composition',
-  subnautica: 'Subnautica ocean planet 4546B, bioluminescent deep underwater trench, massive terrifying Leviathan lurking in dark abyss, glowing alien coral, Cyclops submarine headlights piercing deep water, 8k cinematic, 9:16 vertical composition',
-  rust: 'Rust hardcore survival aesthetic, brutal armored metal bunker base on a snowy cliff, auto-turrets with red laser sights, dramatic dusk sky, gritty photorealistic survival game render, 9:16 vertical composition',
-  palworld: 'Palworld creature survival aesthetic, bustling automated factory compound with assembly lines, vibrant 3D anime style, legendary Pals working on power generators, beautiful open world sky, 9:16 vertical composition',
-  once_human: 'Once Human cosmic horror survival aesthetic, abandoned surreal modern city corrupted by glowing alien Stardust, mysterious Deviants floating, dark sci-fi volumetric fog, 9:16 vertical composition',
-  '7days_to_die': '7 Days to Die zombie horde survival aesthetic, fortified concrete defense tower with glowing electric blade traps, red blood moon sky, intense apocalyptic atmosphere, 9:16 vertical composition',
-  factorio: 'Factorio top-down automation aesthetic, vast infinite grid of conveyor belts, glowing green inserters, sprawling train networks, glowing nuclear power plants, gritty sci-fi industrial aesthetic, 9:16 vertical composition',
-};
-
-export const GAME_IMAGE_PRESETS: Record<string, { label: string; prompt: string }[]> = {
+export const GAME_INFOGRAPHIC_PRESETS: Record<string, { label: string; prompt: string; type: string }[]> = {
   satisfactory: [
-    { label: '🏭 100% Efficient Mega Factory', prompt: 'Massive multi-floor Satisfactory factory with glowing conveyor manifolds, orange pipes, and space elevator at sunset' },
-    { label: '⚡ Infinite Nuclear Power Grid', prompt: 'Towering nuclear power plants with glowing green water cooling towers and complex pipe routing in Satisfactory' },
-    { label: '🚀 Phase 5 Space Elevator Base', prompt: 'Futuristic logistics hub with freight trains, hyper tubes, and the colossal space elevator ascending into clouds' },
+    {
+      label: '⚡ The Iron-Only Assembly (Zero Screws)',
+      prompt: 'The Iron-Only Assembly (Total Consolidation) for Reinforced Iron Plates using Stitched Iron Plate and Iron Wire alternate recipes to eliminate copper and screws',
+      type: 'Optimization Flowchart',
+    },
+    {
+      label: '🔥 Infinite Turbofuel Power Grid',
+      prompt: 'Infinite Turbofuel Power Plant Ratio Blueprint: 300 Crude Oil to 800 Turbofuel feeding 44 Fuel Generators with Heavy Oil Residue and Diluted Fuel',
+      type: 'Power Ratio Guide',
+    },
+    {
+      label: '☢️ Zero Nuclear Waste Plutonium Loop',
+      prompt: 'FICSIT Zero Nuclear Waste Recycling Schematic: Uranium Waste to Plutonium Fuel Rods to Sink conversion loop with exact machine ratios',
+      type: 'Recycling Matrix',
+    },
+    {
+      label: '⚙️ Manifold vs Load Balancer Throughput',
+      prompt: 'Conveyor Belt Throughput Masterclass: Manifold vs Load Balancing math comparison with Mk.5 Belts and Smart Splitter overflows',
+      type: 'Logistics Blueprint',
+    },
   ],
   enshrouded: [
-    { label: '🌫️ Secret Shrouded Castle Ruins', prompt: 'Ancient gothic castle swallowed by glowing blue Shroud fog with a Flameborn warrior holding a glowing torch' },
-    { label: '🪽 Infinite Glider Overlook', prompt: 'High mountain cliff overlooking the vast Embervale valleys and sunken Shroud roots at golden hour' },
-    { label: '🏰 High-Comfort Voxel Base', prompt: 'Warm cozy stone and timber tavern base with glowing hearth, bookshelves, and trophy wall in Enshrouded' },
+    {
+      label: '🌫️ Flame Altar Level 6 Progression Matrix',
+      prompt: 'Embervale Flame Altar Level 6 Upgrade Guide: Spark locations, Shroud core crafting, passage timer multipliers, and biome unlocks',
+      type: 'Progression Map',
+    },
+    {
+      label: '🪽 Infinite Glider & Updraft Stamina Skip',
+      prompt: 'Infinite Glider Flight Mechanics: Ghost Glider stamina efficiency, updraft boosting skill tree synergy, and traversal skips',
+      type: 'Traversal Guide',
+    },
+    {
+      label: '💎 Level 25 Legendary Chest Farming Route',
+      prompt: 'Sun Temple Level 25 Golden Chest Farm Route: Fast travel altar placement, reload timers, and highest DPS weapon drop rates',
+      type: 'Loot Route Blueprint',
+    },
+    {
+      label: '🏰 60-Minute Rest Comfort Maxing',
+      prompt: 'Base Comfort 60+ Minute Buff Optimization: Fireplace tier, furniture stacking rules, and rested bonus stamina regeneration math',
+      type: 'Base Buff Guide',
+    },
   ],
   valheim: [
-    { label: '⚔️ Ashlands Lava Fortress', prompt: 'Viking siege outpost built on black obsidian pillars surrounded by boiling lava and Ashlands storm clouds' },
-    { label: '🌊 Sea Serpent Ocean Hunt', prompt: 'Viking Longship sailing through massive stormy waves with a colossal glowing sea serpent circling the hull' },
-    { label: '🌲 Mistlands Treehouse Base', prompt: 'Towering Yggdrasil root base enveloped in purple Mistlands fog with glowing Dvergr lanterns' },
+    {
+      label: '🛡️ Structural Integrity & Beam Weight Math',
+      prompt: 'Viking Structural Physics Blueprint: Blue to Red beam stability load calculation, iron wood pole reinforcement, and maximum roof height math',
+      type: 'Architecture Blueprint',
+    },
+    {
+      label: '🍖 Food Triad Optimization (HP vs Stamina vs Eitr)',
+      prompt: 'Ashlands Food Triad Matrix: Optimal recipes for Health, Stamina, and Eitr balancing with duration and regeneration multipliers',
+      type: 'Buff Matrix',
+    },
+    {
+      label: '🐺 2-Star Wolf Army Automated Breeding Farm',
+      prompt: 'Automated 2-Star Wolf Breeding Tower: Elevated feeding drop chute, cub separation physics, and infinite meat auto-farm',
+      type: 'Breeding Blueprint',
+    },
+    {
+      label: '⚔️ Ashlands Siege & Lava Shield Tactics',
+      prompt: 'Ashlands Fortress Conquest Guide: Battering ram mechanics, catapult ammo recipes, and lava protection potion timing',
+      type: 'Combat Blueprint',
+    },
   ],
   subnautica: [
-    { label: '🦈 Reaper Leviathan Attack', prompt: 'Terrifying Reaper Leviathan charging towards a Seamoth submarine in the dark murky depths of the crash zone' },
-    { label: '🌋 Inactive Lava Zone Thermal Base', prompt: 'Futuristic glass habitat base built over glowing lava falls with a Sea Dragon Leviathan swimming overhead' },
-    { label: '🛸 Alien Primary Containment Facility', prompt: 'Massive precursor alien architecture submerged in crystal clear ocean with green ion cube power conduits' },
+    {
+      label: '🌊 Submarine Crush Depth & Upgrade Matrix',
+      prompt: 'Alterra PDA Submarine Crush Depth Matrix: Seamoth, PRAWN Suit, and Cyclops depth modules (Mk.1-3) with required rare materials and depth limits',
+      type: 'Depth Tier Chart',
+    },
+    {
+      label: '⚡ Thermal Power & Transmitter Energy Grid',
+      prompt: 'Deep Sea Thermal Energy Pipeline: Thermal plant placement over volcanic vents with Power Transmitter relay line distance math',
+      type: 'Energy Grid Blueprint',
+    },
+    {
+      label: '🦈 Leviathan Threat Sonar & Evasion Zones',
+      prompt: 'Planet 4546B Leviathan Danger Zone Map: Reaper, Ghost, and Sea Dragon patrol depths with Stasis Rifle and Perimeter Defense counter-measures',
+      type: 'Tactical Threat Map',
+    },
   ],
   rust: [
-    { label: '💣 Unraidable Pixel Bunker', prompt: 'Brutal multi-layer armored metal bunker with high external stone walls and auto-turrets at sunset in Rust' },
-    { label: '🚁 Large Oil Rig Infiltration', prompt: 'Mini copter landing on the helipad of the Large Oil Rig surrounded by ocean spray and red siren lights' },
+    {
+      label: '💣 Unraidable Pixel-Gap Bunker Schematic',
+      prompt: 'Unraidable Pixel-Gap Stability Bunker: Roof bunker open/close trigger mechanics, honeycombing cross-section, and TC upkeep breakdown',
+      type: 'Bunker Blueprint',
+    },
+    {
+      label: '⚡ Smart Turret & Logic Gate Electrical Grid',
+      prompt: 'Automated Defense Circuit: Solar panel to battery to RF Receiver and AND/OR logic switches triggering concealed auto-turrets',
+      type: 'Circuit Diagram',
+    },
+    {
+      label: '🚀 Raid Cost Calculation Table (Rockets vs C4)',
+      prompt: 'Rust Wall Destruction Cost Matrix: Sheet metal, armored, and garage doors destruction costs in Rockets, C4, Satchels, and Explosive Ammo',
+      type: 'Raid Cost Matrix',
+    },
   ],
   palworld: [
-    { label: '🐾 Automated Ingot Foundry Base', prompt: 'High-tech Palworld production facility with Anubis Pals crafting assembly items around glowing electric furnaces' },
-    { label: '🐉 Legendary Jetragon Sky Mount', prompt: 'Player riding a glowing sonic Jetragon dragon across the volcanic biome at high speed in Palworld' },
+    {
+      label: '🐾 Ultimate 4-Passive Anubis Breeding Tree',
+      prompt: 'Ultimate 4-Passive Worker Anubis Breeding Tree: Artisan, Serious, Lucky, Work Slave combination routes and egg incubation conditions',
+      type: 'Breeding Flowchart',
+    },
+    {
+      label: '🏭 10,000/hr Automated Ore & Ingot Foundry',
+      prompt: 'Automated Ore & Ingot Production Base: Pal work suitability tier 4 assignments, feed box nutrition math, and zero-stuck pathing layout',
+      type: 'Factory Blueprint',
+    },
+  ],
+  factorio: [
+    {
+      label: '☢️ Perfect 2x2 Nuclear Reactor Ratio Schematic',
+      prompt: 'Perfect 2x2 Nuclear Power Plant Ratio Blueprint: 4 Nuclear Reactors to 48 Heat Exchangers to 83 Steam Turbines with exact water pump ratios',
+      type: 'Nuclear Math Guide',
+    },
+    {
+      label: '🚂 Train Signal Masterclass (Block vs Chain)',
+      prompt: 'Factorio Train Signaling Masterclass: Chain Signal in, Block Signal out rule diagram with 4-way intersection deadlock prevention',
+      type: 'Rail Logistics Guide',
+    },
   ],
 };
 
-export async function enhanceGamingPrompt(
-  basePrompt: string,
+const GAME_INFOGRAPHIC_STYLE_ANCHORS: Record<string, { org: string; header: string; colorScheme: string; footer: string }> = {
+  satisfactory: {
+    org: 'FICSIT Inc.',
+    header: 'FICSIT INC. LOGISTICS MASTERCLASS',
+    colorScheme: 'dark navy blueprint grid with faint CAD machinery wireframes, glowing amber-orange machine cards, electric-cyan item badges, thick white flow arrows',
+    footer: 'ZERO COPPER. ZERO SCREWS. ULTIMATE EFFICIENCY.',
+  },
+  enshrouded: {
+    org: 'Flameborn Archives',
+    header: 'EMBERVALE SURVIVAL & PROGRESSION GUIDE',
+    colorScheme: 'dark gothic arcane blueprint grid with glowing blue Shroud runes, amber flame altar cards, golden stat callouts, sleek technical layout',
+    footer: 'MASTER THE SHROUD. CONQUER EMBERVALE.',
+  },
+  valheim: {
+    org: 'Allfather Builder Guild',
+    header: 'VALHEIM NORSE ARCHITECTURE & INTEGRITY BLUEPRINT',
+    colorScheme: 'dark slate Viking blueprint grid with glowing green torches, color-coded beam stability bars (Blue, Green, Yellow, Red), rune stat badges',
+    footer: 'STRUCTURAL PERFECTION. ODIN APPROVED.',
+  },
+  subnautica: {
+    org: 'Alterra Corporation',
+    header: 'ALTERRA PDA TACTICAL DEEP-DIVE SCHEMATIC',
+    colorScheme: 'deep abyss navy holographic HUD grid, glowing neon cyan depth meters, orange thermal power nodes, crisp Alterra corporate typography',
+    footer: 'TACTICAL DEPTH PROTOCOL. ZERO LOSS ASSURED.',
+  },
+  rust: {
+    org: 'Hardcore Survivalist Blueprint',
+    header: 'RUST TACTICAL BASE DEFENSE & BUNKER BLUEPRINT',
+    colorScheme: 'dark industrial CAD blueprint grid with amber construction lines, red warning callouts, armored metal cutaway cards, rocket cost table',
+    footer: '100% UNRAIDABLE. ZERO OFFLINE RAIDS.',
+  },
+  palworld: {
+    org: 'Palpagos Research Institute',
+    header: 'PALPAGOS AUTOMATION & BREEDING MATRIX',
+    colorScheme: 'modern high-tech laboratory blueprint grid with purple and teal glowing cards, Pal DNA gene nodes, automated assembly rate badges',
+    footer: 'MAXIMUM EFFICIENCY. 4-PASSIVE PERFECTION.',
+  },
+  factorio: {
+    org: 'The Factory Must Grow Engineering',
+    header: 'THE FACTORY MUST GROW LOGISTICS BLUEPRINT',
+    colorScheme: 'technical engineering CAD grid with orange belt lines, green circuit nodes, exact fluid ratio tables, zero bottleneck arrows',
+    footer: 'THE FACTORY MUST GROW. ZERO BOTTLENECKS.',
+  },
+};
+
+export async function buildInfographicPrompt(
+  baseTopic: string,
   gameId: string
 ): Promise<string> {
   const config = getConfig();
+  const gameProfile = getGameProfile(gameId);
+  const styleAnchor = GAME_INFOGRAPHIC_STYLE_ANCHORS[gameId] || GAME_INFOGRAPHIC_STYLE_ANCHORS.satisfactory;
+
   if (!config.geminiApiKey) {
-    const anchor = GAME_STYLE_ANCHORS[gameId] || 'Gaming artwork, photorealistic 8k, cinematic 9:16 vertical';
-    return `${basePrompt}, ${anchor}`;
+    return `A highly detailed professional gaming infographic blueprint card in 9:16 vertical aspect ratio, styled after ${styleAnchor.org} UI. Central top-down factory/gameplay automation flowchart showing "${baseTopic}" with rounded glowing UI cards, material icons, machine icons, recipe names, production rates (e.g. 18.75/min), thick glowing flow arrows, header banner "${styleAnchor.header}", dedicated "The Math Callout" section in lower left with comparative stats, vibrant footer banner "${styleAnchor.footer}", ${styleAnchor.colorScheme}, photorealistic 8k technical UI infographic design.`;
   }
 
   try {
     const genAI = new GoogleGenerativeAI(config.geminiApiKey);
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
-      generationConfig: { temperature: 0.7, maxOutputTokens: 150 },
+      generationConfig: { temperature: 0.6, maxOutputTokens: 300 },
     });
 
-    const gameProfile = getGameProfile(gameId);
-    const prompt = `Write a vivid, photorealistic image prompt describing a 9:16 vertical gaming scene for "${gameProfile.name}".
-Concept: "${basePrompt}"
-Output should describe the environment, lighting, architecture, and action in 2 descriptive sentences ending with "9:16 vertical composition, 8k photorealistic game capture". Return ONLY the prompt text.`;
+    const systemPrompt = `You are a world-class infographic prompt architect for viral 9:16 gaming tutorial cards.
+Write an ultra-detailed, photorealistic image generation prompt that creates a crisp, professional 9:16 vertical infographic blueprint card for the game "${gameProfile.name}".
 
-    const res = await model.generateContent(prompt);
-    const text = res.response.text().trim();
-    if (text && text.length > 20) {
-      return text;
+TOPIC: "${baseTopic}"
+
+STYLE SPECIFICATIONS:
+- Aspect Ratio: Exactly 9:16 vertical composition.
+- Overall Layout: Top corporate/universe header banner ("${styleAnchor.header}"), central top-down step-by-step flowchart with rounded glowing rectangular UI cards, recipe names, production throughput rates (e.g. per-minute numbers), thick glowing flow arrows.
+- Lower Left Section: A distinct framed "The Math Callout" box comparing standard vs optimized costs/benefits.
+- Bottom Footer Banner: High-impact bold statement ("${styleAnchor.footer}").
+- Background: ${styleAnchor.colorScheme}.
+- Aesthetics: Ultra-crisp, futuristic, technical blueprint schematic, highly informative, perfectly readable UI design.
+
+Return ONLY the prompt text, without markdown, quotes, or preambles.`;
+
+    const res = await model.generateContent(systemPrompt);
+    const promptText = res.response.text().trim();
+    if (promptText && promptText.length > 50) {
+      return promptText;
     }
-    return `${basePrompt}, ${GAME_STYLE_ANCHORS[gameId] || ''}`;
   } catch (err) {
-    return `${basePrompt}, ${GAME_STYLE_ANCHORS[gameId] || ''}`;
+    console.warn('Error in buildInfographicPrompt with Gemini, using template fallback:', err);
   }
+
+  return `A highly detailed professional gaming infographic blueprint card in 9:16 vertical aspect ratio, styled after ${styleAnchor.org} UI. Central top-down flowchart showing "${baseTopic}" with rounded glowing UI cards, material icons, machine icons, recipe names, exact production rates, thick glowing flow arrows, header banner "${styleAnchor.header}", The Math Callout section, bold footer banner "${styleAnchor.footer}", ${styleAnchor.colorScheme}, 8k photorealistic infographic design.`;
 }
 
 export async function generateGameImage(
@@ -97,28 +242,31 @@ export async function generateGameImage(
 ): Promise<{ filePath: string; url: string; width: number; height: number; promptUsed: string }> {
   const config = getConfig();
   const gameId = params.gameId || 'satisfactory';
+  const styleMode = params.styleMode || 'infographic';
 
   let finalPrompt = params.prompt;
-  if (params.enhanceWithAI) {
-    finalPrompt = await enhanceGamingPrompt(params.prompt, gameId);
+
+  if (styleMode === 'infographic') {
+    finalPrompt = await buildInfographicPrompt(params.prompt, gameId);
   } else {
-    const anchor = GAME_STYLE_ANCHORS[gameId] || 'Gaming screenshot aesthetic, 9:16 vertical 8k';
-    finalPrompt = `${params.prompt}, ${anchor}`;
+    // Cinematic scenery prompt
+    const gameProfile = getGameProfile(gameId);
+    finalPrompt = `Cinematic photorealistic 9:16 vertical 8k game capture of "${params.prompt}" in ${gameProfile.name}, Unreal Engine 5 aesthetic, volumetric dramatic lighting, 9:16 vertical composition`;
   }
 
-  const filename = `ai-game-${gameId}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}.jpg`;
+  const filename = `dfl-${styleMode}-${gameId}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}.jpg`;
   const outputPath = path.join(config.paths.uploads, filename);
 
   const width = 1080;
   const height = 1920;
 
-  // 1. Check if Google Gemini Image Generation can generate image directly
+  // 1. Google Gemini Image Generation if configured
   if (config.geminiApiKey) {
     try {
       const googleRes = await axios.post(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${config.geminiApiKey}`,
         {
-          contents: [{ parts: [{ text: `Generate a high quality visual scene in 9:16 vertical format: ${finalPrompt}` }] }],
+          contents: [{ parts: [{ text: `Generate a high quality 9:16 vertical visual infographic/scene: ${finalPrompt}` }] }],
         },
         { timeout: 25000, httpsAgent }
       );
@@ -137,7 +285,7 @@ export async function generateGameImage(
   }
 
   // 2. High-Performance Flux & Turbo Engine via Pollinations
-  const encoded = encodeURIComponent(finalPrompt.slice(0, 500));
+  const encoded = encodeURIComponent(finalPrompt.slice(0, 600));
   const models = ['flux', 'turbo'];
 
   for (const m of models) {
@@ -146,7 +294,7 @@ export async function generateGameImage(
       const res = await axios.get(url, {
         responseType: 'arraybuffer',
         httpsAgent,
-        timeout: 35000,
+        timeout: 40000,
       });
 
       if (res.data && res.data.length > 5000) {
@@ -164,5 +312,5 @@ export async function generateGameImage(
     }
   }
 
-  throw new Error('Failed to generate AI gaming image after multiple engine attempts.');
+  throw new Error('Failed to generate gaming image/infographic card.');
 }

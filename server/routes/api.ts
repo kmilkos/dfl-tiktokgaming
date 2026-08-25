@@ -8,7 +8,7 @@ import { GAME_PROFILES } from '../data/games.js';
 import { generateGamingScript } from '../services/geminiGaming.js';
 import { synthesizeSpeech, GAMING_VOICES } from '../services/ttsEngine.js';
 import { renderGaming916Video } from '../services/visualMotion.js';
-import { generateGameImage, GAME_IMAGE_PRESETS } from '../services/gameImageGenerator.js';
+import { generateGameImage, GAME_INFOGRAPHIC_PRESETS } from '../services/gameImageGenerator.js';
 
 export const apiRouter = Router();
 
@@ -119,14 +119,14 @@ apiRouter.post('/upload/image-base64', (req, res) => {
   }
 });
 
-// 3c. AI Gaming Image Generation (Flux / Gemini)
+// 3c. AI Gaming Infographic / Scene Generation (Flux / Gemini)
 apiRouter.get('/image/presets', (req, res) => {
-  res.json(GAME_IMAGE_PRESETS);
+  res.json(GAME_INFOGRAPHIC_PRESETS);
 });
 
 apiRouter.post('/generate/image', async (req, res) => {
   try {
-    const { prompt, gameId, enhanceWithAI, model } = req.body;
+    const { prompt, gameId, styleMode, enhanceWithAI, model } = req.body;
     if (!prompt || !prompt.trim()) {
       return res.status(400).json({ error: 'Prompt is required for image generation' });
     }
@@ -134,6 +134,7 @@ apiRouter.post('/generate/image', async (req, res) => {
     const result = await generateGameImage({
       prompt,
       gameId: gameId || 'satisfactory',
+      styleMode: styleMode || 'infographic',
       enhanceWithAI: enhanceWithAI ?? true,
       model: model || 'flux',
       aspectRatio: '9:16',

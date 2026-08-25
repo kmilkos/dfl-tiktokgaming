@@ -66,7 +66,7 @@ export async function uploadScreenshotBase64(filename: string, data: string): Pr
   return res.json();
 }
 
-export async function fetchImagePresets(): Promise<Record<string, { label: string; prompt: string }[]>> {
+export async function fetchImagePresets(): Promise<Record<string, { label: string; prompt: string; type?: string }[]>> {
   const res = await fetch(`${BASE_URL}/image/presets`);
   return res.json();
 }
@@ -74,13 +74,14 @@ export async function fetchImagePresets(): Promise<Record<string, { label: strin
 export async function generateGameImage(
   prompt: string,
   gameId?: string,
+  styleMode: 'infographic' | 'cinematic' = 'infographic',
   enhanceWithAI = true,
   model = 'flux'
 ): Promise<any> {
   const res = await fetch(`${BASE_URL}/generate/image`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, gameId, enhanceWithAI, model }),
+    body: JSON.stringify({ prompt, gameId, styleMode, enhanceWithAI, model }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
