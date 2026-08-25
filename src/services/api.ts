@@ -66,6 +66,29 @@ export async function uploadScreenshotBase64(filename: string, data: string): Pr
   return res.json();
 }
 
+export async function fetchImagePresets(): Promise<Record<string, { label: string; prompt: string }[]>> {
+  const res = await fetch(`${BASE_URL}/image/presets`);
+  return res.json();
+}
+
+export async function generateGameImage(
+  prompt: string,
+  gameId?: string,
+  enhanceWithAI = true,
+  model = 'flux'
+): Promise<any> {
+  const res = await fetch(`${BASE_URL}/generate/image`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, gameId, enhanceWithAI, model }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to generate AI gaming image');
+  }
+  return res.json();
+}
+
 export async function generateGamingScript(
   imagePath: string | undefined,
   context: ProjectContext,

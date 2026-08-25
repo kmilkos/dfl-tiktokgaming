@@ -8,6 +8,7 @@ import { GAME_PROFILES } from '../data/games.js';
 import { generateGamingScript } from '../services/geminiGaming.js';
 import { synthesizeSpeech, GAMING_VOICES } from '../services/ttsEngine.js';
 import { renderGaming916Video } from '../services/visualMotion.js';
+import { generateGameImage, GAME_IMAGE_PRESETS } from '../services/gameImageGenerator.js';
 
 export const apiRouter = Router();
 
@@ -115,6 +116,44 @@ apiRouter.post('/upload/image-base64', (req, res) => {
     res.json({ success: true, image: imageMetadata });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// 3c. AI Gaming Image Generation (Flux / Gemini)
+apiRouter.get('/image/presets', (req, res) => {
+  res.json(GAME_IMAGE_PRESETS);
+});
+
+apiRouter.post('/generate/image', async (req, res) => {
+  try {
+    const { prompt, gameId, enhanceWithAI, model } = req.body;
+    if (!prompt || !prompt.trim()) {
+      return res.status(400).json({ error: 'Prompt is required for image generation' });
+    }
+
+    const result = await generateGameImage({
+      prompt,
+      gameId: gameId || 'satisfactory',
+      enhanceWithAI: enhanceWithAI ?? true,
+      model: model || 'flux',
+      aspectRatio: '9:16',
+    });
+
+    const imageMetadata = {
+      filename: path.basename(result.filePath),
+      path: result.filePath,
+      url: result.url,
+      width: result.width,
+      height: result.height,
+      format: 'jpg',
+      sizeBytes: fs.statSync(result.filePath).size,
+      promptUsed: result.promptUsed,
+    };
+
+    res.json({ success: true, image: imageMetadata });
+  } catch (err: any) {
+    console.error('Image generation error:', err);
+    res.status(500).json({ error: err.message || 'Image generation failed' });
   }
 });
 

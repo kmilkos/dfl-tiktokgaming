@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Upload,
   Image as ImageIcon,
@@ -16,9 +16,12 @@ import {
   Crosshair,
   Wrench,
   Trash2,
+  Palette,
+  Loader2,
+  Wand2,
 } from 'lucide-react';
 import { GameProfile, GamingContentType, GamingProject, HookStyleType, ToneType } from '../types';
-import { uploadScreenshot } from '../services/api';
+import { uploadScreenshot, generateGameImage, fetchImagePresets } from '../services/api';
 
 interface GamingContextPaneProps {
   project: GamingProject;
@@ -38,6 +41,15 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
   isGeneratingScript,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageMode, setImageMode] = useState<'upload' | 'ai_generate'>('ai_generate');
+  const [customImagePrompt, setCustomImagePrompt] = useState('');
+  const [enhancePromptWithAI, setEnhancePromptWithAI] = useState(true);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imagePresets, setImagePresets] = useState<Record<string, { label: string; prompt: string }[]>>({});
+
+  useEffect(() => {
+    fetchImagePresets().then(setImagePresets).catch(() => {});
+  }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -51,6 +63,29 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
       console.error('Error uploading screenshot:', err);
     }
   };
+
+  const handleGenerateAIImage = async (promptToUse?: string) => {
+    const p = promptToUse || customImagePrompt;
+    if (!p.trim()) return;
+    try {
+      setIsGeneratingImage(true);
+      const res = await generateGameImage(
+        p,
+        activeGame.id,
+        enhancePromptWithAI,
+        'flux'
+      );
+      if (res.success && res.image) {
+        onUpdateImage(res.image);
+      }
+    } catch (err: any) {
+      alert(`Image Generation Failed: ${err.message || err}`);
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const activePresets = imagePresets[activeGame.id] || [];
 
   const contentTypes: { id: GamingContentType; label: string; icon: any; desc: string }[] = [
     { id: 'factory_math', label: 'Factory Math & Ratios', icon: Calculator, desc: 'Conveyors, overclocking, throughput & power grids' },
@@ -90,7 +125,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
           </div>
           <div>
             <h2 className="text-sm font-bold text-white">1. Gameplay Context & Ingestion</h2>
-            <p className="text-[11px] text-slate-400 font-mono">Screenshot vision & content formulas</p>
+            <p className="text-[11px] text-slate-400 font-mono">Screenshot vision, AI art & formulas</p>
           </div>
         </div>
 
@@ -99,20 +134,50 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
         </span>
       </div>
 
-      {/* Screenshot / Image Uploader */}
-      <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-          <span>Gameplay Screenshot / Blueprint (Optional)</span>
+      {/* Visual Ingestion Mode: AI Image Generator vs Upload */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-slate-300">Visual Media & Scene Source</label>
           {project.image && (
             <button
               onClick={() => onUpdateImage(undefined)}
               className="text-[10px] text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer font-mono"
             >
-              <Trash2 className="w-3 h-3" /> Remove
+              <Trash2 className="w-3 h-3" /> Clear Image
             </button>
           )}
-        </label>
+        </div>
 
+        {/* Tab Switcher */}
+        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-950 border border-slate-800">
+          <button
+            type="button"
+            onClick={() => setImageMode('ai_generate')}
+            className={`py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              imageMode === 'ai_generate'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Palette className="w-3.5 h-3.5" />
+            <span>AI Image Generator</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setImageMode('upload')}
+            className={`py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              imageMode === 'upload'
+                ? 'bg-slate-800 text-slate-100 shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Upload Screenshot</span>
+          </button>
+        </div>
+
+        {/* If image exists, show preview */}
         {project.image ? (
           <div className="relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-700/80 aspect-video group">
             <img
@@ -123,10 +188,85 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
             <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-[11px] font-mono text-slate-300">
               <span className="truncate">{project.image.filename}</span>
-              <span className="text-emerald-400 font-bold">Vision Ingested ✓</span>
+              <span className="text-emerald-400 font-bold">Scene Ready ✓</span>
             </div>
           </div>
+        ) : imageMode === 'ai_generate' ? (
+          /* AI Image Generator Form */
+          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+            
+            {/* Quick 1-Click Game Presets */}
+            {activePresets.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">
+                  1-Click {activeGame.name} Scene Presets:
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {activePresets.map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      disabled={isGeneratingImage}
+                      onClick={() => {
+                        setCustomImagePrompt(preset.prompt);
+                        handleGenerateAIImage(preset.prompt);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-emerald-950/60 border border-slate-800 hover:border-emerald-600/60 text-left text-xs text-slate-300 hover:text-emerald-300 transition-colors flex items-center justify-between gap-2 cursor-pointer group"
+                    >
+                      <span className="font-semibold text-[11px] truncate">{preset.label}</span>
+                      <Sparkles className="w-3 h-3 text-slate-600 group-hover:text-emerald-400 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Custom Prompt Input */}
+            <div className="space-y-1.5 pt-1 border-t border-slate-800/60">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 font-semibold">Custom Scene Prompt</span>
+                <label className="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer font-mono">
+                  <input
+                    type="checkbox"
+                    checked={enhancePromptWithAI}
+                    onChange={(e) => setEnhancePromptWithAI(e.target.checked)}
+                    className="accent-emerald-500 rounded"
+                  />
+                  <span>AI 8K Game Anchor</span>
+                </label>
+              </div>
+
+              <textarea
+                rows={2}
+                value={customImagePrompt}
+                onChange={(e) => setCustomImagePrompt(e.target.value)}
+                placeholder={`e.g. Gigantic industrial nuclear reactor facility in ${activeGame.name} with purple glowing steam`}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 font-sans resize-none"
+              />
+
+              <button
+                type="button"
+                onClick={() => handleGenerateAIImage()}
+                disabled={isGeneratingImage || !customImagePrompt.trim()}
+                className="w-full py-2 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
+              >
+                {isGeneratingImage ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Generating 9:16 Gaming Scene (Flux Engine)...</span>
+                  </>
+                ) : (
+                  <>
+                    <Palette className="w-3.5 h-3.5" />
+                    <span>Generate 9:16 AI Artwork</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+          </div>
         ) : (
+          /* File Upload Box */
           <div
             onClick={() => fileInputRef.current?.click()}
             className="border-2 border-dashed border-slate-700/80 hover:border-emerald-500/60 rounded-2xl p-4 text-center bg-slate-950/40 hover:bg-slate-950/80 transition-all cursor-pointer group space-y-1.5"
@@ -138,10 +278,11 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
               Drop gameplay screenshot, base layout, or blueprint
             </p>
             <p className="text-[10px] text-slate-500 font-mono">
-              Gemini Vision will auto-inspect UI stats, materials & building tiers
+              Inspects inventory, UI stats, materials & building tiers
             </p>
           </div>
         )}
+
         <input
           type="file"
           ref={fileInputRef}
