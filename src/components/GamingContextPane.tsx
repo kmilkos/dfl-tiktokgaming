@@ -18,10 +18,11 @@ import {
   Trash2,
   Palette,
   Loader2,
-  Wand2,
+  Link,
+  CheckCircle2,
 } from 'lucide-react';
 import { GameProfile, GamingContentType, GamingScriptItem, HookStyleType, ToneType } from '../types';
-import { uploadScreenshot, generateGameImage, fetchImagePresets } from '../services/api';
+import { uploadScreenshot, uploadImageUrl, generateGameImage, fetchImagePresets } from '../services/api';
 
 interface GamingContextPaneProps {
   scriptItem: GamingScriptItem;
@@ -41,9 +42,12 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
   isGeneratingScript,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [imageMode, setImageMode] = useState<'upload' | 'ai_generate'>('ai_generate');
+  const [imageMode, setImageMode] = useState<'ai_generate' | 'upload' | 'url'>('ai_generate');
   const [styleMode, setStyleMode] = useState<'infographic' | 'cinematic'>('infographic');
+  const [engineMode, setEngineMode] = useState<'procedural' | 'flux'>('procedural');
   const [customImagePrompt, setCustomImagePrompt] = useState('');
+  const [imageUrlInput, setImageUrlInput] = useState('');
+  const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [enhancePromptWithAI, setEnhancePromptWithAI] = useState(true);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [imagePresets, setImagePresets] = useState<Record<string, { label: string; prompt: string; type?: string }[]>>({});
@@ -65,6 +69,22 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
     }
   };
 
+  const handleFetchImageUrl = async () => {
+    if (!imageUrlInput.trim()) return;
+    try {
+      setIsFetchingUrl(true);
+      const res = await uploadImageUrl(imageUrlInput.trim());
+      if (res.success && res.image) {
+        onUpdateImage(res.image);
+        setImageUrlInput('');
+      }
+    } catch (err: any) {
+      alert(`Failed to load image from URL: ${err.message || err}`);
+    } finally {
+      setIsFetchingUrl(false);
+    }
+  };
+
   const handleGenerateAIImage = async (promptToUse?: string, forcedStyle?: 'infographic' | 'cinematic') => {
     const p = promptToUse || customImagePrompt;
     if (!p.trim()) return;
@@ -76,7 +96,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
         activeGame.id,
         targetStyle,
         enhancePromptWithAI,
-        'flux'
+        engineMode
       );
       if (res.success && res.image) {
         onUpdateImage(res.image);
@@ -128,7 +148,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
           </div>
           <div>
             <h2 className="text-sm font-bold text-white">1. Gameplay Context & Ingestion</h2>
-            <p className="text-[11px] text-slate-400 font-mono">Screenshot vision, AI art & formulas</p>
+            <p className="text-[11px] text-slate-400 font-mono">Infographic Studio, Screenshot vision & ratios</p>
           </div>
         </div>
 
@@ -137,7 +157,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
         </span>
       </div>
 
-      {/* Visual Ingestion Mode: AI Image Generator vs Upload */}
+      {/* Visual Ingestion Mode: AI Blueprint vs Screenshot Upload vs URL */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
           <label className="text-xs font-semibold text-slate-300">Visual Media & Scene Source</label>
@@ -152,7 +172,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-950 border border-slate-800">
+        <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-950 border border-slate-800">
           <button
             type="button"
             onClick={() => setImageMode('ai_generate')}
@@ -163,7 +183,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
             }`}
           >
             <Palette className="w-3.5 h-3.5" />
-            <span>AI Image Generator</span>
+            <span>Infographic Studio</span>
           </button>
 
           <button
@@ -176,7 +196,20 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
             }`}
           >
             <Upload className="w-3.5 h-3.5" />
-            <span>Upload Screenshot</span>
+            <span>Upload File</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setImageMode('url')}
+            className={`py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              imageMode === 'url'
+                ? 'bg-cyan-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Link className="w-3.5 h-3.5" />
+            <span>Paste URL</span>
           </button>
         </div>
 
@@ -190,44 +223,40 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
             <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-[11px] font-mono text-slate-300">
-              <span className="truncate">{scriptItem.image.filename}</span>
-              <span className="text-emerald-400 font-bold">Scene Ready ✓</span>
+              <span className="truncate max-w-[200px]">{scriptItem.image.filename}</span>
+              <span className="text-emerald-400 font-bold flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Ready ✓
+              </span>
             </div>
           </div>
         ) : imageMode === 'ai_generate' ? (
           /* AI Image Generator Form */
           <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
             
-            {/* Style Mode Selector */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400">
-                <span>Output Visual Style:</span>
+            {/* Style & Engine Controls */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <span className="text-[11px] font-semibold text-slate-400">Layout Format</span>
+                <select
+                  value={styleMode}
+                  onChange={(e) => setStyleMode(e.target.value as 'infographic' | 'cinematic')}
+                  className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="infographic">📊 Infographic Card (9:16)</option>
+                  <option value="cinematic">🎬 Cinematic 3D Scene</option>
+                </select>
               </div>
-              <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-900 border border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setStyleMode('infographic')}
-                  className={`py-1 rounded-lg text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    styleMode === 'infographic'
-                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
+
+              <div className="space-y-1">
+                <span className="text-[11px] font-semibold text-slate-400">Rendering Engine</span>
+                <select
+                  value={engineMode}
+                  onChange={(e) => setEngineMode(e.target.value as any)}
+                  className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold text-emerald-400 focus:outline-none focus:border-emerald-500"
                 >
-                  <Calculator className="w-3 h-3" />
-                  <span>📊 Infographic Card</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStyleMode('cinematic')}
-                  className={`py-1 rounded-lg text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    styleMode === 'cinematic'
-                      ? 'bg-purple-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>🎬 Cinematic Scene</span>
-                </button>
+                  <option value="procedural">⚡ Vector CAD Engine (100% Crisp)</option>
+                  <option value="flux">🎨 FLUX.1 Diffusion Model</option>
+                </select>
               </div>
             </div>
 
@@ -235,9 +264,9 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
             {activePresets.length > 0 && (
               <div className="space-y-1.5">
                 <span className="text-[10px] font-mono text-slate-400 font-bold uppercase flex items-center justify-between">
-                  <span>1-Click {activeGame.name} Infographic Blueprints:</span>
+                  <span>1-Click {activeGame.name} Blueprint Templates:</span>
                 </span>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1">
                   {activePresets.map((preset, idx) => (
                     <button
                       key={idx}
@@ -264,20 +293,9 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
 
             {/* Custom Prompt Input */}
             <div className="space-y-1.5 pt-1 border-t border-slate-800/60">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-slate-400 font-semibold">
-                  {styleMode === 'infographic' ? 'Infographic Topic / Optimization Ratio' : 'Custom Scene Prompt'}
-                </span>
-                <label className="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer font-mono">
-                  <input
-                    type="checkbox"
-                    checked={enhancePromptWithAI}
-                    onChange={(e) => setEnhancePromptWithAI(e.target.checked)}
-                    className="accent-emerald-500 rounded"
-                  />
-                  <span>AI Blueprint Architecture</span>
-                </label>
-              </div>
+              <span className="text-[11px] text-slate-400 font-semibold">
+                {styleMode === 'infographic' ? 'Infographic Topic & Recipe Ratios' : 'Custom Scene Prompt'}
+              </span>
 
               <textarea
                 rows={2}
@@ -285,8 +303,8 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
                 onChange={(e) => setCustomImagePrompt(e.target.value)}
                 placeholder={
                   styleMode === 'infographic'
-                    ? `e.g. Infographic flowchart showing infinite turbofuel power plant ratio with 44 fuel generators in ${activeGame.name}`
-                    : `e.g. Gigantic industrial nuclear reactor facility in ${activeGame.name} with purple glowing steam`
+                    ? `e.g. Alternate recipe Cast Screws converting 12.5 Iron Ingots direct to 50 Screws/min in ${activeGame.name}`
+                    : `e.g. Giant industrial factory complex in ${activeGame.name} with volumetric lighting`
                 }
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 font-sans resize-none"
               />
@@ -300,40 +318,62 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
                 {isGeneratingImage ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>
-                      {styleMode === 'infographic'
-                        ? 'Synthesizing 9:16 Infographic Blueprint Card...'
-                        : 'Generating 9:16 Gaming Scene (Flux Engine)...'}
-                    </span>
+                    <span>Rendering 9:16 High-Density Blueprint Card...</span>
                   </>
                 ) : (
                   <>
                     <Palette className="w-3.5 h-3.5" />
-                    <span>
-                      {styleMode === 'infographic'
-                        ? 'Generate 9:16 Infographic Blueprint Card'
-                        : 'Generate 9:16 AI Artwork'}
-                    </span>
+                    <span>Generate 9:16 Gaming Infographic</span>
                   </>
                 )}
               </button>
             </div>
 
           </div>
+        ) : imageMode === 'url' ? (
+          /* Direct URL Ingestion Form */
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+            <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <Link className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Import Image from Web / Wiki / Reddit / Discord</span>
+            </span>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="url"
+                value={imageUrlInput}
+                onChange={(e) => setImageUrlInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleFetchImageUrl()}
+                placeholder="https://example.com/satisfactory-blueprint.png"
+                className="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 font-mono"
+              />
+              <button
+                type="button"
+                onClick={handleFetchImageUrl}
+                disabled={isFetchingUrl || !imageUrlInput.trim()}
+                className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isFetchingUrl ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>Fetch</span>}
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500 font-mono">
+              Downloads and formats any high-resolution web image into your 9:16 video studio.
+            </p>
+          </div>
         ) : (
           /* File Upload Box */
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-slate-700/80 hover:border-emerald-500/60 rounded-2xl p-4 text-center bg-slate-950/40 hover:bg-slate-950/80 transition-all cursor-pointer group space-y-1.5"
+            className="border-2 border-dashed border-slate-700/80 hover:border-emerald-500/60 rounded-2xl p-5 text-center bg-slate-950/40 hover:bg-slate-950/80 transition-all cursor-pointer group space-y-1.5"
           >
             <div className="w-9 h-9 rounded-xl bg-slate-800/80 group-hover:bg-emerald-500/20 text-slate-400 group-hover:text-emerald-400 mx-auto flex items-center justify-center transition-colors">
               <Upload className="w-4 h-4" />
             </div>
             <p className="text-xs font-bold text-slate-200 group-hover:text-emerald-300">
-              Drop gameplay screenshot, base layout, or blueprint
+              Drop screenshot, gameplay photo, or wiki image
             </p>
             <p className="text-[10px] text-slate-500 font-mono">
-              Inspects inventory, UI stats, materials & building tiers
+              PNG, JPG, WEBP up to 50MB
             </p>
           </div>
         )}
