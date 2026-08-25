@@ -7,7 +7,9 @@ import { GamingPreviewPane } from './components/GamingPreviewPane';
 import { GameSelectorModal } from './components/GameSelectorModal';
 import { ProjectsModal } from './components/ProjectsModal';
 import { SettingsModal } from './components/SettingsModal';
+import { QuotaAlertModal } from './components/QuotaAlertModal';
 import { GameProfile, GamingProject, GamingScriptItem, VoiceOption } from './types';
+import { QuotaErrorInfo } from './utils/quotaParser';
 import {
   fetchGames,
   fetchVoices,
@@ -37,6 +39,11 @@ export const App: React.FC = () => {
   const [isGameSelectorOpen, setIsGameSelectorOpen] = useState(false);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Quota Error Alert State
+  const [activeQuotaError, setActiveQuotaError] = useState<QuotaErrorInfo | null>(null);
+  const [isQuotaModalOpen, setIsQuotaModalOpen] = useState(false);
+  const [pendingRetryAction, setPendingRetryAction] = useState<(() => void) | null>(null);
 
   // Loading States
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
@@ -213,6 +220,12 @@ export const App: React.FC = () => {
     }
   };
 
+  const triggerQuotaAlert = (quotaInfo: QuotaErrorInfo, retryFn?: () => void) => {
+    setActiveQuotaError(quotaInfo);
+    if (retryFn) setPendingRetryAction(() => retryFn);
+    setIsQuotaModalOpen(true);
+  };
+
   // Generation & Voice Actions for Active Script
   const handleGenerateScript = async () => {
     if (!currentProject || !activeScript) return;
@@ -230,7 +243,11 @@ export const App: React.FC = () => {
         title: activeScript.context.topic || res.script.hook.slice(0, 30) || activeScript.title,
       });
     } catch (err: any) {
-      alert(`Script Generation Failed: ${err.message || err}`);
+      if (err.quotaInfo?.isQuotaError) {
+        triggerQuotaAlert(err.quotaInfo, handleGenerateScript);
+      } else {
+        alert(`Script Generation Failed: ${err.message || err}`);
+      }
     } finally {
       setIsGeneratingScript(false);
     }
@@ -257,7 +274,11 @@ export const App: React.FC = () => {
         status: 'voiced',
       });
     } catch (err: any) {
-      alert(`Voice Synthesis Failed: ${err.message || err}`);
+      if (err.quotaInfo?.isQuotaError) {
+        triggerQuotaAlert(err.quotaInfo, handleSynthesizeAudio);
+      } else {
+        alert(`Voice Synthesis Failed: ${err.message || err}`);
+      }
     } finally {
       setIsSynthesizingAudio(false);
     }
@@ -280,7 +301,11 @@ export const App: React.FC = () => {
         status: 'rendered',
       });
     } catch (err: any) {
-      alert(`Video Rendering Failed: ${err.message || err}`);
+      if (err.quotaInfo?.isQuotaError) {
+        triggerQuotaAlert(err.quotaInfo, handleRenderVideo);
+      } else {
+        alert(`Video Rendering Failed: ${err.message || err}`);
+      }
     } finally {
       setIsRenderingVideo(false);
     }
@@ -331,6 +356,7 @@ export const App: React.FC = () => {
                 onUpdateImage={(img) => handleUpdateActiveScript({ image: img })}
                 onGenerateScript={handleGenerateScript}
                 isGeneratingScript={isGeneratingScript}
+                onTriggerQuotaAlert={(qInfo, retryFn) => triggerQuotaAlert(qInfo, retryFn)}
               />
             </div>
 
@@ -406,6 +432,18 @@ export const App: React.FC = () => {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+      />
+
+      {/* Quota / Rate-Limit Alert Modal with Live Countdown */}
+      <QuotaAlertModal
+        isOpen={isQuotaModalOpen}
+        onClose={() => {
+          setIsQuotaModalOpen(false);
+          setActiveQuotaError(null);
+        }}
+        quotaInfo={activeQuotaError}
+        onRetry={pendingRetryAction ? () => pendingRetryAction() : undefined}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
     </div>

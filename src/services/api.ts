@@ -132,6 +132,20 @@ export async function fetchImagePresets(): Promise<Record<string, { label: strin
   return res.json();
 }
 
+import { QuotaErrorInfo } from '../utils/quotaParser';
+
+export class ApiError extends Error {
+  public quotaInfo?: QuotaErrorInfo;
+  public status?: number;
+
+  constructor(message: string, quotaInfo?: QuotaErrorInfo, status?: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.quotaInfo = quotaInfo;
+    this.status = status;
+  }
+}
+
 export async function generateGameImage(
   prompt: string,
   gameId?: string,
@@ -146,7 +160,7 @@ export async function generateGameImage(
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to generate AI gaming image');
+    throw new ApiError(err.error || 'Failed to generate AI gaming image', err.quotaInfo, res.status);
   }
   return res.json();
 }
@@ -163,7 +177,7 @@ export async function generateGamingScript(
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to generate script');
+    throw new ApiError(err.error || 'Failed to generate script', err.quotaInfo, res.status);
   }
   return res.json();
 }
@@ -182,7 +196,7 @@ export async function generateTTS(
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to synthesize TTS voice');
+    throw new ApiError(err.error || 'Failed to synthesize TTS voice', err.quotaInfo, res.status);
   }
   return res.json();
 }
@@ -195,7 +209,7 @@ export async function renderVideo(project: GamingProject): Promise<{ outputPath:
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to render 9:16 video');
+    throw new ApiError(err.error || 'Failed to render 9:16 video', err.quotaInfo, res.status);
   }
   return res.json();
 }

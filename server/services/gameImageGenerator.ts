@@ -13,7 +13,7 @@ import {
 const httpsAgent = new https.Agent({ family: 4, keepAlive: true });
 
 export type ImageStyleMode = 'infographic' | 'cinematic';
-export type GeneratorEngineType = 'procedural' | 'flux' | 'turbo';
+export type GeneratorEngineType = 'procedural' | 'gemini_image' | 'flux' | 'turbo';
 
 export interface GameImageGenParams {
   prompt: string;
@@ -145,11 +145,48 @@ export async function generateGameImage(
         };
       }
     } catch (err: any) {
-      console.warn('[ImageGen] Procedural Blueprint failed, falling back to Flux:', err.message);
+      console.warn('[ImageGen] Procedural Blueprint failed, falling back:', err.message);
     }
   }
 
-  // 2. Flux / Turbo AI Image Generation with Enhanced Prompting
+  // 2. Google Gemini Native Image Generation (Supported on Gemini keys with Image Generation quota enabled)
+  if (config.geminiApiKey && (engine === 'gemini_image' || !engine)) {
+    const geminiModels = ['gemini-2.5-flash-image', 'gemini-3.1-flash-image', 'gemini-3-pro-image'];
+    for (const model of geminiModels) {
+      try {
+        console.log(`[ImageGen] Trying Google ${model}...`);
+        const googleRes = await axios.post(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.geminiApiKey}`,
+          {
+            contents: [{ parts: [{ text: `Generate a 9:16 vertical gaming visual card: ${params.prompt}` }] }],
+            generationConfig: { responseModalities: ['IMAGE'] },
+          },
+          { timeout: 20000, httpsAgent }
+        );
+
+        const parts = googleRes.data?.candidates?.[0]?.content?.parts || [];
+        for (const p of parts) {
+          if (p.inlineData?.data) {
+            const filename = `dfl-gemini-image-${gameId}-${Date.now()}.png`;
+            const outputPath = path.join(config.paths.uploads, filename);
+            fs.writeFileSync(outputPath, Buffer.from(p.inlineData.data, 'base64'));
+            return {
+              filePath: outputPath,
+              url: `/api/media/stream?path=${encodeURIComponent(outputPath)}`,
+              width,
+              height,
+              promptUsed: params.prompt,
+              engineUsed: model,
+            };
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[ImageGen] Google ${model} not available on this key (${err.response?.status || err.message}), trying next...`);
+      }
+    }
+  }
+
+  // 3. High-Quality Flux / Turbo Diffusion Engine
   const gameProfile = getGameProfile(gameId);
   const promptSeed = Math.floor(Math.random() * 1000000);
 

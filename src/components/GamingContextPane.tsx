@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { GameProfile, GamingContentType, GamingScriptItem, HookStyleType, ToneType } from '../types';
 import { uploadScreenshot, uploadImageUrl, generateGameImage, fetchImagePresets } from '../services/api';
+import { QuotaErrorInfo } from '../utils/quotaParser';
 
 interface GamingContextPaneProps {
   scriptItem: GamingScriptItem;
@@ -31,6 +32,7 @@ interface GamingContextPaneProps {
   onUpdateImage: (image: GamingScriptItem['image'] | undefined) => void;
   onGenerateScript: () => void;
   isGeneratingScript: boolean;
+  onTriggerQuotaAlert?: (quotaInfo: QuotaErrorInfo, retryFn?: () => void) => void;
 }
 
 export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
@@ -40,6 +42,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
   onUpdateImage,
   onGenerateScript,
   isGeneratingScript,
+  onTriggerQuotaAlert,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageMode, setImageMode] = useState<'ai_generate' | 'upload' | 'url'>('ai_generate');
@@ -102,7 +105,11 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
         onUpdateImage(res.image);
       }
     } catch (err: any) {
-      alert(`Image Generation Failed: ${err.message || err}`);
+      if (err.quotaInfo?.isQuotaError && onTriggerQuotaAlert) {
+        onTriggerQuotaAlert(err.quotaInfo, () => handleGenerateAIImage(promptToUse, forcedStyle));
+      } else {
+        alert(`Image Generation Failed: ${err.message || err}`);
+      }
     } finally {
       setIsGeneratingImage(false);
     }

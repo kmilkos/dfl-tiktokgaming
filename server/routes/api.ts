@@ -9,6 +9,7 @@ import { generateGamingScript } from '../services/geminiGaming.js';
 import { synthesizeSpeech, GAMING_VOICES } from '../services/ttsEngine.js';
 import { renderGaming916Video } from '../services/visualMotion.js';
 import { generateGameImage, fetchImageFromUrl, GAME_INFOGRAPHIC_PRESETS } from '../services/gameImageGenerator.js';
+import { parseQuotaError } from '../utils/quotaParser.js';
 
 export const apiRouter = Router();
 
@@ -227,7 +228,11 @@ apiRouter.post('/generate/image', async (req, res) => {
     res.json({ success: true, image: imageMetadata });
   } catch (err: any) {
     console.error('Image generation error:', err);
-    res.status(500).json({ error: err.message || 'Image generation failed' });
+    const quotaInfo = parseQuotaError(err, 'Gemini / AI Generator');
+    res.status(quotaInfo.isQuotaError ? 429 : 500).json({
+      error: quotaInfo.userMessage,
+      quotaInfo,
+    });
   }
 });
 
@@ -241,7 +246,11 @@ apiRouter.post('/generate/script', async (req, res) => {
     res.json(result);
   } catch (err: any) {
     console.error('Gaming script generation error:', err);
-    res.status(500).json({ error: err.message || 'Script generation failed' });
+    const quotaInfo = parseQuotaError(err, 'Gemini 2.5 Flash');
+    res.status(quotaInfo.isQuotaError ? 429 : 500).json({
+      error: quotaInfo.userMessage,
+      quotaInfo,
+    });
   }
 });
 
@@ -271,7 +280,11 @@ apiRouter.post('/generate/tts', async (req, res) => {
     });
   } catch (err: any) {
     console.error('TTS synthesis error:', err);
-    res.status(500).json({ error: err.message || 'TTS synthesis failed' });
+    const quotaInfo = parseQuotaError(err, 'ElevenLabs / TTS');
+    res.status(quotaInfo.isQuotaError ? 429 : 500).json({
+      error: quotaInfo.userMessage,
+      quotaInfo,
+    });
   }
 });
 
