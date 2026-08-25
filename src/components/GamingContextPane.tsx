@@ -293,71 +293,44 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
               </div>
             )}
 
-            {/* Quick 1-Click Game Presets */}
-            {activePresets.length > 0 && (
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-mono text-slate-400 font-bold uppercase flex items-center justify-between">
-                  <span>1-Click {activeGame.name} Blueprint Templates:</span>
-                </span>
-                <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1">
-                  {activePresets.map((preset, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      disabled={isGeneratingImage}
-                      onClick={() => {
-                        setCustomImagePrompt(preset.prompt);
-                        if (preset.templateType) setTemplateType(preset.templateType);
-                        handleGenerateAIImage(preset.prompt, 'infographic', preset.templateType || templateType);
-                      }}
-                      className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-emerald-950/60 border border-slate-800 hover:border-emerald-600/60 text-left text-xs text-slate-300 hover:text-emerald-300 transition-colors flex items-center justify-between gap-2 cursor-pointer group"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-semibold text-[11px] truncate">{preset.label}</p>
-                        {preset.type && (
-                          <span className="text-[9px] font-mono text-emerald-400/90">{preset.type}</span>
-                        )}
-                      </div>
-                      <Sparkles className="w-3 h-3 text-slate-600 group-hover:text-emerald-400 flex-shrink-0" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Custom Prompt Input */}
-            <div className="space-y-1.5 pt-1 border-t border-slate-800/60">
-              <span className="text-[11px] text-slate-400 font-semibold">
-                {styleMode === 'infographic' ? 'Infographic Topic & Recipe Ratios' : 'Custom Scene Prompt'}
-              </span>
+            <div className="space-y-2 pt-1 border-t border-slate-800/60">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-300 font-bold">
+                  {styleMode === 'infographic' ? 'Custom Topic, Recipe, or Factory Math' : 'Custom Scene Prompt'}
+                </span>
+                <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                  100% Dynamic Engine
+                </span>
+              </div>
 
               <textarea
-                rows={2}
+                rows={3}
                 value={customImagePrompt}
                 onChange={(e) => setCustomImagePrompt(e.target.value)}
                 placeholder={
                   styleMode === 'infographic'
-                    ? `e.g. Alternate recipe Cast Screws converting 12.5 Iron Ingots direct to 50 Screws/min in ${activeGame.name}`
-                    : `e.g. Giant industrial factory complex in ${activeGame.name} with volumetric lighting`
+                    ? `Type any custom topic for ${activeGame.name} (e.g. "Compacted Coal recipe with 25 Sulfur + 25 Coal", "Manifolds vs Load Balancers", "Infinite Turbofuel", "Plutonium Waste Recycling")...`
+                    : `e.g. Giant industrial factory complex in ${activeGame.name} with volumetric atmospheric lighting`
                 }
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 font-sans resize-none"
+                className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 font-sans resize-none"
               />
 
               <button
                 type="button"
                 onClick={() => handleGenerateAIImage()}
                 disabled={isGeneratingImage || !customImagePrompt.trim()}
-                className="w-full py-2 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-orange-500/20 cursor-pointer disabled:opacity-50"
               >
                 {isGeneratingImage ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Rendering 9:16 High-Density Blueprint Card...</span>
+                    <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                    <span>Rendering 9:16 Vector Blueprint...</span>
                   </>
                 ) : (
                   <>
-                    <Palette className="w-3.5 h-3.5" />
-                    <span>Generate 9:16 Gaming Infographic</span>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Generate Custom 9:16 Blueprint</span>
                   </>
                 )}
               </button>

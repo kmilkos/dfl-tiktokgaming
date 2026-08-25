@@ -65,260 +65,94 @@ export interface FicsitInfographicData {
   verdict: string;
 }
 
+// 100% Dynamic Lexical Parser for Custom User Topics (zero hardcoded presets)
 export function synthesizeDeterministicFicsitData(
   gameId: string,
   userTopic: string,
   templateType: FicsitTemplateType = 'FLOWCHART_CONSOLIDATION'
 ): FicsitInfographicData {
-  const lower = (userTopic || '').toLowerCase();
   const game = getGameProfile(gameId);
+  const cleanTopic = (userTopic || 'CUSTOM PRODUCTION BLUEPRINT').trim();
+  const upperTitle = cleanTopic.toUpperCase();
 
-  // 1. Compacted Coal
-  if (lower.includes('compact') || lower.includes('coal') || lower.includes('sulfur')) {
-    return {
-      infographic_id: 'ficsit-compacted-coal',
-      template_type: templateType,
-      aspect_ratio: '9:16',
-      header: {
-        organization: 'FICSIT INC.',
-        category: 'ALTERNATE FUEL PROTOCOL',
-        title: 'COMPACTED COAL SYNTHESIS',
-        subtitle: '(2.1X ENERGY MULTIPLIER)',
-      },
-      raw_inputs: [
-        { name: 'Coal (25/min) + Sulfur (25/min)', rate: '1:1 Infeed Ratio', icon_type: 'coal_sulfur' },
-      ],
-      pathway_nodes: [
-        {
-          path_id: 'Standard Path',
-          machine: 'Standard Coal Generator',
-          output_item: 'Raw Coal Power (300 MJ)',
-          rate: '15/min Coal per 75 MW',
-          subtext: 'Standard Burn: High mineral burn rate, low density.',
-          is_bottleneck: true,
-        },
-        {
-          path_id: 'Alternate Path',
-          machine: 'Assembler -> Generator',
-          recipe_tag: 'Compacted Coal Recipe',
-          output_item: 'Compacted Coal (630 MJ)',
-          rate: '25/min -> 25/min Compacted',
-          subtext: 'High-Density Feed: Slashes coal usage by 52% per MW produced.',
-          is_optimal: true,
-        },
-      ],
-      assembly_node: {
-        machine: 'Assembler (100% Clock)',
-        recipe_name: 'Compacted Coal (M.A.M. Hard Drive)',
-        final_output: 'Compacted Coal Fuel',
-        output_rate: '25/min (630 MJ/unit)',
-      },
-      math_callouts: [
-        'Standard Coal Energy: 300 MJ per unit (15/min for 75MW).',
-        'Compacted Coal Energy: 630 MJ per unit (7.14/min for 75MW).',
-        'Efficiency Gain: Feeds 2.1x more generators per coal node.',
-        'Turbofuel Synergy: Essential precursor to 44-Generator Turbofuel grids.',
-      ],
-      verdict: '+110% POWER DENSITY. HALF THE COAL. ESSENTIAL FOR TURBOFUEL.',
-    };
+  // Extract candidate rates (e.g. 50/min, 12.5/min, 780/min, 100 MW)
+  const rateMatches = cleanTopic.match(/(\d+(?:\.\d+)?\s*(?:\/min|mw|m³\/min|items|%))/gi) || [];
+  const primaryRate = rateMatches[0] || '100% Steady-State';
+  const secondaryRate = rateMatches[1] || '+100% Throughput';
+
+  // Determine machine type dynamically based on topic keywords
+  let machineA = 'Standard Processor';
+  let machineB = 'Optimized Processing Unit';
+  let assemblerMachine = 'Central Fabrication Node';
+
+  const lower = cleanTopic.toLowerCase();
+  if (lower.includes('oil') || lower.includes('fuel') || lower.includes('fluid')) {
+    machineA = 'Standard Refinery';
+    machineB = 'Turbo Blender / Refinery';
+    assemblerMachine = 'Fluid Blending Array';
+  } else if (lower.includes('smelt') || lower.includes('ingot') || lower.includes('ore')) {
+    machineA = 'Standard Smelter';
+    machineB = 'Foundry / Refined Smelter';
+    assemblerMachine = 'High-Speed Constructor';
+  } else if (lower.includes('assembl') || lower.includes('plate') || lower.includes('frame') || lower.includes('rotor') || lower.includes('motor')) {
+    machineA = 'Standard Constructor Chain';
+    machineB = 'Alternate Assembler';
+    assemblerMachine = 'Automated Assembler';
+  } else if (lower.includes('manifold') || lower.includes('belt') || lower.includes('splitter')) {
+    machineA = 'Load Balancer Splitter Tree';
+    machineB = 'Inline Manifold Cascade';
+    assemblerMachine = 'Smart Splitter Buffer';
   }
 
-  // 2. Manifolds vs Load Balancers
-  if (lower.includes('manifold') || lower.includes('balancer') || lower.includes('splitter') || lower.includes('logistics')) {
-    return {
-      infographic_id: 'ficsit-manifold-throughput',
-      template_type: templateType,
-      aspect_ratio: '9:16',
-      header: {
-        organization: 'FICSIT INC.',
-        category: 'CONVEYOR ARCHITECTURE',
-        title: 'MANIFOLD VS LOAD BALANCING',
-        subtitle: '(THROUGHPUT SATURATION)',
-      },
-      raw_inputs: [
-        { name: 'Mk.5 Mainline (780/min)', rate: 'Full Belt Saturated', icon_type: 'conveyor' },
-      ],
-      pathway_nodes: [
-        {
-          path_id: 'Load Balancers',
-          machine: 'Complex Splitter Tree (1:9 / 1:27)',
-          output_item: 'Evenly Split Belts',
-          rate: 'Instant 100% Saturation',
-          subtext: 'Massive footprint: Requires 4x more foundation space and complex belt spaghetti.',
-          is_bottleneck: true,
-        },
-        {
-          path_id: 'Manifold Architecture',
-          machine: 'Inline Splitter Daisy-Chain',
-          output_item: 'Overflow Cascade',
-          rate: 'Linear 780/min Saturation',
-          subtext: 'Ultra-compact: 1 foundation wide, self-balancing as internal buffers fill.',
-          is_optimal: true,
-        },
-      ],
-      assembly_node: {
-        machine: 'Smart Splitters with Overflow',
-        recipe_name: 'Dynamic Manifold Protocol',
-        final_output: '100% Machine Uptime',
-        output_rate: '780/min Saturated',
-      },
-      math_callouts: [
-        'Load Balancer Footprint: Up to 12 Foundations + 3-tier belt spaghetti.',
-        'Manifold Footprint: 2 Foundations inline with zero clipping.',
-        'Warmup Time: Manifolds reach 100% saturation in ~3-5 minutes.',
-        'Scalability: Infinite expansion by extending the main line.',
-      ],
-      verdict: 'MANIFOLDS SAVE 75% FACTORY SPACE. EQUAL EFFICIENCY AT STEADY-STATE.',
-    };
-  }
-
-  // 3. Turbofuel Power Grid
-  if (lower.includes('turbo') || lower.includes('fuel') || lower.includes('oil') || lower.includes('generator')) {
-    return {
-      infographic_id: 'ficsit-turbofuel-grid',
-      template_type: templateType,
-      aspect_ratio: '9:16',
-      header: {
-        organization: 'FICSIT INC.',
-        category: 'POWER GRID MASTERCLASS',
-        title: 'INFINITE TURBOFUEL MATRIX',
-        subtitle: '(300 OIL ➜ 44 GENERATORS)',
-      },
-      raw_inputs: [
-        { name: 'Crude Oil (300 m³/min)', rate: '1 Pure Node Infeed', icon_type: 'crude_oil' },
-      ],
-      pathway_nodes: [
-        {
-          path_id: 'Standard Fuel Path',
-          machine: 'Standard Refineries',
-          output_item: 'Fuel (200 m³/min)',
-          rate: 'Feeds ~16 Fuel Generators (4,000 MW)',
-          subtext: 'Standard Burn: Wastes 60% of oil potential on raw conversion.',
-          is_bottleneck: true,
-        },
-        {
-          path_id: 'Alternate Turbofuel',
-          machine: 'HOR + Diluted Fuel + Turbofuel',
-          recipe_tag: 'Heavy Oil Residue + Turbofuel',
-          output_item: 'Turbofuel (800 m³/min)',
-          rate: 'Feeds 44 Fuel Generators (11,000 MW)',
-          subtext: 'Hyper-Efficiency: Triples power generation from the exact same crude node.',
-          is_optimal: true,
-        },
-      ],
-      assembly_node: {
-        machine: 'Blender / Refinery Array',
-        recipe_name: 'Turbo Blend Fuel Loop',
-        final_output: 'Turbofuel Power Output',
-        output_rate: '11,000 MW Megawatt Net',
-      },
-      math_callouts: [
-        'Standard Fuel: 300 Crude Oil = 4,000 MW.',
-        'Turbofuel Alternate: 300 Crude Oil = 11,000 MW (+175% Power).',
-        'Required Byproducts: Compacted Coal + Heavy Oil Residue.',
-        'Net Surplus: Powers mid-game to Tier 8 on a single pipe.',
-      ],
-      verdict: '+175% POWER OUTPUT. 11,000 MW FROM ONE NORMAL CRUDE OIL NODE.',
-    };
-  }
-
-  // 4. Cast Screws
-  if (lower.includes('screw') || lower.includes('cast')) {
-    return {
-      infographic_id: 'ficsit-cast-screws',
-      template_type: templateType,
-      aspect_ratio: '9:16',
-      header: {
-        organization: 'FICSIT INC.',
-        category: 'PRODUCTION GUIDE: ALTERNATE RECIPE',
-        title: 'CAST SCREWS (BYPASS RODS)',
-        subtitle: '(SINGLE-STEP FABRICATION)',
-      },
-      raw_inputs: [
-        { name: 'Iron Ingots (12.5/min)', rate: 'Direct Constructor Infeed', icon_type: 'iron_ingot' },
-      ],
-      pathway_nodes: [
-        {
-          path_id: 'Standard Path',
-          machine: 'Constructor -> Constructor',
-          output_item: 'Screws (40/min)',
-          rate: 'Requires Iron Rod Logistics (2 Machines)',
-          subtext: 'Inefficient: 2 Constructor stages, 8 MW power, extra belt logistics.',
-          is_bottleneck: true,
-        },
-        {
-          path_id: 'Alternate Path',
-          machine: '1 Constructor (Cast Screws)',
-          recipe_tag: 'Cast Screws M.A.M. Unlock',
-          output_item: 'Screws (50/min)',
-          rate: 'Direct Ingot Feed (1 Machine)',
-          subtext: 'Optimal: Slashes machines and power footprint by 50%.',
-          is_optimal: true,
-        },
-      ],
-      assembly_node: {
-        machine: 'Constructor (100% Clock)',
-        recipe_name: 'Cast Screws Recipe',
-        final_output: 'Screws Output',
-        output_rate: '50/min Direct',
-      },
-      math_callouts: [
-        'Standard: 12.5 Ingots -> 12.5 Rods -> 50 Screws (2 Machines, 8 MW).',
-        'Cast Screws: 12.5 Ingots -> 50 Screws (1 Machine, 4 MW).',
-        '-50% Factory Footprint & Zero intermediate Rod belts.',
-        'Eliminates the #1 early-game factory bottleneck.',
-      ],
-      verdict: 'ELIMINATE IRON RODS. CUT CONSTRUCTORS BY 50%. INSTANT 50/MIN.',
-    };
-  }
-
-  // 5. Default Generic FICSIT Synthesizer for Any Topic
-  const cleanTitle = (userTopic || 'FACTORY OPTIMIZATION MATRIX').toUpperCase();
   return {
-    infographic_id: `ficsit-${Date.now()}`,
+    infographic_id: `ficsit-custom-${Date.now()}`,
     template_type: templateType,
     aspect_ratio: '9:16',
     header: {
       organization: 'FICSIT INC.',
       category: 'LOGISTICS MASTERCLASS',
-      title: cleanTitle.slice(0, 42),
-      subtitle: `(${game.name.toUpperCase()} OPTIMIZATION)`,
+      title: upperTitle.length > 40 ? upperTitle.slice(0, 38) + '...' : upperTitle,
+      subtitle: `(${game.name.toUpperCase()} EFFICIENCY PROTOCOL)`,
     },
     raw_inputs: [
-      { name: `Primary Resource (${game.name})`, rate: 'Optimized Infeed', icon_type: 'raw_material' },
+      {
+        name: `Infeed: ${cleanTopic.split(' ')[0] || 'Raw Resource'}`,
+        rate: primaryRate,
+        icon_type: 'custom_infeed',
+      },
     ],
     pathway_nodes: [
       {
-        path_id: 'Standard Protocol',
-        machine: 'Standard Processing Unit',
-        output_item: 'Default Baseline Output',
-        rate: 'Standard Ratio',
-        subtext: 'High machine footprint and material loss.',
+        path_id: templateType === 'PROBLEM_SOLUTION' ? 'The Problem' : 'Path A (Standard)',
+        machine: machineA,
+        output_item: `Baseline ${cleanTopic.slice(0, 18)}`,
+        rate: primaryRate,
+        subtext: 'Baseline Routing: High machine footprint, redundant stages.',
         is_bottleneck: true,
       },
       {
-        path_id: 'Optimized Meta',
-        machine: 'Advanced Processing Pipeline',
-        recipe_tag: 'Meta Optimization Protocol',
-        output_item: 'Maximum Yield Output',
-        rate: '+100% Throughput',
-        subtext: 'Optimized routing with zero waste and lowest power consumption.',
+        path_id: templateType === 'PROBLEM_SOLUTION' ? 'The Solution' : 'Path B (Optimized)',
+        machine: machineB,
+        recipe_tag: 'Alternate Unlocked',
+        output_item: `Max Yield ${cleanTopic.slice(0, 18)}`,
+        rate: secondaryRate,
+        subtext: 'Optimal Flow: Maximum throughput, minimal footprint and zero waste.',
         is_optimal: true,
       },
     ],
     assembly_node: {
-      machine: 'Final Assembly Node',
-      recipe_name: `${cleanTitle.slice(0, 24)} Matrix`,
-      final_output: `${cleanTitle.slice(0, 20)} End Product`,
-      output_rate: 'Max Steady-State',
+      machine: assemblerMachine,
+      recipe_name: `${cleanTopic.slice(0, 24)} Assembly`,
+      final_output: `${cleanTopic.slice(0, 22)} End Product`,
+      output_rate: secondaryRate,
     },
     math_callouts: [
-      `Optimization Target: Maximize ${cleanTitle.slice(0, 26)}.`,
-      'Power Savings: -35% MW consumption per unit produced.',
-      'Logistics Density: Zero belt congestion with inline buffers.',
-      'Operational Uptime: 100% efficiency guaranteed at steady-state.',
+      `Target Objective: Optimize ${cleanTopic.slice(0, 30)}.`,
+      `Throughput Metric: Maximized at ${secondaryRate}.`,
+      'Footprint Reduction: Eliminates intermediate conveyor bottlenecks.',
+      'Operational Uptime: 100% verified efficiency at steady-state.',
     ],
-    verdict: `${cleanTitle.slice(0, 30)}: MAXIMUM EFFICIENCY. ZERO WASTE.`,
+    verdict: `${upperTitle.slice(0, 32)}: MAXIMUM EFFICIENCY. ZERO WASTE.`,
   };
 }
 
