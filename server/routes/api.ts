@@ -60,6 +60,56 @@ apiRouter.delete('/projects/:id', (req, res) => {
   res.json({ ok });
 });
 
+// 2b. Project Script Management
+apiRouter.post('/projects/:id/scripts', (req, res) => {
+  try {
+    const newScript = projectManager.addScriptToProject(req.params.id, req.body);
+    const project = projectManager.getProject(req.params.id);
+    res.json({ success: true, script: newScript, project });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.put('/projects/:id/scripts/:scriptId', (req, res) => {
+  try {
+    const updated = projectManager.updateScriptInProject(req.params.id, req.params.scriptId, req.body);
+    const project = projectManager.getProject(req.params.id);
+    res.json({ success: true, script: updated, project });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.delete('/projects/:id/scripts/:scriptId', (req, res) => {
+  try {
+    const ok = projectManager.deleteScriptFromProject(req.params.id, req.params.scriptId);
+    const project = projectManager.getProject(req.params.id);
+    res.json({ ok, project });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/projects/:id/scripts/:scriptId/duplicate', (req, res) => {
+  try {
+    const duplicated = projectManager.duplicateScriptInProject(req.params.id, req.params.scriptId);
+    const project = projectManager.getProject(req.params.id);
+    res.json({ success: true, script: duplicated, project });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.put('/projects/:id/active-script/:scriptId', (req, res) => {
+  try {
+    const project = projectManager.updateProject(req.params.id, { activeScriptId: req.params.scriptId });
+    res.json(project);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 3. Screenshot Upload
 apiRouter.post('/upload/screenshot', upload.single('screenshot'), (req, res) => {
   try {

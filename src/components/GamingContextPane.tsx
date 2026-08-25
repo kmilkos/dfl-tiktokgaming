@@ -20,20 +20,20 @@ import {
   Loader2,
   Wand2,
 } from 'lucide-react';
-import { GameProfile, GamingContentType, GamingProject, HookStyleType, ToneType } from '../types';
+import { GameProfile, GamingContentType, GamingScriptItem, HookStyleType, ToneType } from '../types';
 import { uploadScreenshot, generateGameImage, fetchImagePresets } from '../services/api';
 
 interface GamingContextPaneProps {
-  project: GamingProject;
+  scriptItem: GamingScriptItem;
   activeGame: GameProfile;
-  onUpdateContext: (context: Partial<GamingProject['context']>) => void;
-  onUpdateImage: (image: GamingProject['image'] | undefined) => void;
+  onUpdateContext: (context: Partial<GamingScriptItem['context']>) => void;
+  onUpdateImage: (image: GamingScriptItem['image'] | undefined) => void;
   onGenerateScript: () => void;
   isGeneratingScript: boolean;
 }
 
 export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
-  project,
+  scriptItem,
   activeGame,
   onUpdateContext,
   onUpdateImage,
@@ -141,7 +141,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
           <label className="text-xs font-semibold text-slate-300">Visual Media & Scene Source</label>
-          {project.image && (
+          {scriptItem.image && (
             <button
               onClick={() => onUpdateImage(undefined)}
               className="text-[10px] text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer font-mono"
@@ -181,16 +181,16 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
         </div>
 
         {/* If image exists, show preview */}
-        {project.image ? (
+        {scriptItem.image ? (
           <div className="relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-700/80 aspect-video group">
             <img
-              src={project.image.url}
+              src={scriptItem.image.url}
               alt="Gameplay Screenshot"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
             <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-[11px] font-mono text-slate-300">
-              <span className="truncate">{project.image.filename}</span>
+              <span className="truncate">{scriptItem.image.filename}</span>
               <span className="text-emerald-400 font-bold">Scene Ready ✓</span>
             </div>
           </div>
@@ -353,7 +353,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
         <div className="grid grid-cols-2 gap-2">
           {contentTypes.map((ct) => {
             const Icon = ct.icon;
-            const isSelected = project.context.contentType === ct.id;
+            const isSelected = scriptItem.context.contentType === ct.id;
             return (
               <button
                 key={ct.id}
@@ -392,7 +392,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
                 type="button"
                 onClick={() => onUpdateContext({ targetDuration: sec })}
                 className={`py-1 rounded-lg text-xs font-bold font-mono transition-all ${
-                  project.context.targetDuration === sec
+                  scriptItem.context.targetDuration === sec
                     ? 'bg-emerald-500 text-slate-950 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
@@ -409,7 +409,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
             <span>Spoken Tone</span>
           </label>
           <select
-            value={project.context.tone}
+            value={scriptItem.context.tone}
             onChange={(e) => onUpdateContext({ tone: e.target.value as ToneType })}
             className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 focus:outline-none focus:border-emerald-500"
           >
@@ -429,7 +429,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
           <span>Hook Retention Formula (First 2.5s)</span>
         </label>
         <select
-          value={project.context.hookStyle}
+          value={scriptItem.context.hookStyle}
           onChange={(e) => onUpdateContext({ hookStyle: e.target.value as HookStyleType })}
           className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 focus:outline-none focus:border-emerald-500"
         >
@@ -449,7 +449,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
         </label>
         <input
           type="text"
-          value={project.context.topic}
+          value={scriptItem.context.topic}
           onChange={(e) => onUpdateContext({ topic: e.target.value })}
           placeholder={`e.g. ${activeGame.popularHooks[0] || 'Nuclear waste recycling layout'}`}
           className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
@@ -462,7 +462,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
         </label>
         <textarea
           rows={3}
-          value={project.context.keyFacts || ''}
+          value={scriptItem.context.keyFacts || ''}
           onChange={(e) => onUpdateContext({ keyFacts: e.target.value })}
           placeholder={`Add exact item names, ratios, or instructions... (e.g. 240 Crude Oil -> 800 Turbofuel -> 44 Fuel Generators)`}
           className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 font-mono resize-none"

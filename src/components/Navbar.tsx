@@ -4,9 +4,10 @@ import { GameProfile, GamingProject } from '../types';
 
 interface NavbarProps {
   currentProject: GamingProject | null;
+  activeScriptTitle?: string;
   activeGame: GameProfile;
   onOpenGameSelector: () => void;
-  onNewProject: () => void;
+  onNewProjectSeries: () => void;
   onOpenProjects: () => void;
   onOpenSettings: () => void;
   isRendering?: boolean;
@@ -14,9 +15,10 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentProject,
+  activeScriptTitle,
   activeGame,
   onOpenGameSelector,
-  onNewProject,
+  onNewProjectSeries,
   onOpenProjects,
   onOpenSettings,
   isRendering,
@@ -38,7 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <h1 className="font-extrabold text-sm sm:text-base tracking-tight text-white flex items-center gap-1.5">
                   <span>DFL TIKTOK GAMING</span>
                   <span className="px-1.5 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-700/60 text-emerald-400 text-[10px] font-mono uppercase tracking-widest font-bold">
-                    9:16 Suite
+                    9:16 Studio
                   </span>
                 </h1>
               </div>
@@ -59,22 +61,29 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </div>
 
-        {/* Project Title / Status */}
+        {/* Project Title / Active Script Status */}
         {currentProject && (
-          <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-slate-900/60 border border-slate-800 rounded-xl max-w-sm">
-            <span className="text-[10px] uppercase font-mono text-slate-500 font-bold">Active Project:</span>
+          <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-slate-900/60 border border-slate-800 rounded-xl max-w-md">
+            <span className="text-[10px] uppercase font-mono text-emerald-400 font-bold">Series:</span>
             <span className="text-xs font-semibold text-slate-200 truncate">{currentProject.title}</span>
+            {activeScriptTitle && (
+              <>
+                <span className="text-slate-600">➜</span>
+                <span className="text-xs font-bold text-cyan-300 truncate">{activeScriptTitle}</span>
+              </>
+            )}
           </div>
         )}
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3">
           <button
-            onClick={onNewProject}
+            onClick={onNewProjectSeries}
             className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+            title="Create a new Game Project / Series"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">New Script</span>
+            <span className="hidden sm:inline">New Series</span>
           </button>
 
           <button

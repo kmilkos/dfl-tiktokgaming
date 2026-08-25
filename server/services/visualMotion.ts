@@ -2,37 +2,38 @@ import fs from 'fs';
 import path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
 import { getConfig } from '../config.js';
-import { GamingProject, MotionStyleType } from '../types.js';
+import { GamingProject, GamingScriptItem, MotionStyleType } from '../types.js';
 
 export async function renderGaming916Video(
-  project: GamingProject,
+  item: GamingScriptItem & { gameId?: string },
   onProgress?: (percent: number) => void
 ): Promise<{ outputPath: string; sizeBytes: number; durationSeconds: number }> {
   const config = getConfig();
 
-  if (!project.image?.path || !fs.existsSync(project.image.path)) {
-    throw new Error('Project has no valid source screenshot or image');
+  if (!item.image?.path || !fs.existsSync(item.image.path)) {
+    throw new Error('Script item has no valid source screenshot or image');
   }
 
-  if (!project.voice.audioPath || !fs.existsSync(project.voice.audioPath)) {
-    throw new Error('Project has no voiceover audio. Generate TTS voice first.');
+  if (!item.voice.audioPath || !fs.existsSync(item.voice.audioPath)) {
+    throw new Error('Script item has no voiceover audio. Generate TTS voice first.');
   }
 
-  const duration = project.voice.durationSeconds || 30;
+  const duration = item.voice.durationSeconds || 30;
   const fps = config.defaultSettings.fps || 60;
   const totalFrames = Math.ceil(duration * fps);
+  const gameId = item.gameId || item.context?.gameId || 'gaming';
 
-  const outputFilename = `dfl-gaming-${project.gameId}-${Date.now()}.mp4`;
+  const outputFilename = `dfl-gaming-${gameId}-${Date.now()}.mp4`;
   const exportsDir = config.paths.exports;
   if (!fs.existsSync(exportsDir)) fs.mkdirSync(exportsDir, { recursive: true });
 
   const outputPath = path.join(exportsDir, outputFilename);
 
-  const motionStyle = project.motion.style || 'ken_burns_zoom';
+  const motionStyle = item.motion.style || 'ken_burns_zoom';
   let zoompanFilter = '';
 
-  const focusX = project.motion.focusPoint?.x ?? 0.5;
-  const focusY = project.motion.focusPoint?.y ?? 0.5;
+  const focusX = item.motion.focusPoint?.x ?? 0.5;
+  const focusY = item.motion.focusPoint?.y ?? 0.5;
 
   if (motionStyle === 'pan_down') {
     zoompanFilter = `zoompan=z='1.2':x='iw*${focusX}-(iw/zoom/2)':y='if(lte(on,1),0,y+((ih-ih/zoom)/${totalFrames}))':d=${totalFrames}:s=1080x1920:fps=${fps}`;
@@ -53,9 +54,9 @@ export async function renderGaming916Video(
 
   return new Promise((resolve, reject) => {
     ffmpeg()
-      .input(project.image!.path)
+      .input(item.image!.path)
       .loop(duration)
-      .input(project.voice.audioPath!)
+      .input(item.voice.audioPath!)
       .complexFilter(complexFilter)
       .outputOptions([
         '-map [v]',

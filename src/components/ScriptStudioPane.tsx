@@ -16,26 +16,26 @@ import {
   HelpCircle,
   Wand2,
 } from 'lucide-react';
-import { GamingProject, VoiceOption } from '../types';
+import { GamingScriptItem, ScriptBeat, VoiceOption } from '../types';
 
 interface ScriptStudioPaneProps {
-  project: GamingProject;
+  scriptItem: GamingScriptItem;
   voices: VoiceOption[];
-  onUpdateScript: (script: Partial<GamingProject['script']>) => void;
-  onUpdateVoice: (voice: Partial<GamingProject['voice']>) => void;
+  onUpdateScript: (script: Partial<GamingScriptItem['script']>) => void;
+  onUpdateVoice: (voice: Partial<GamingScriptItem['voice']>) => void;
   onSynthesizeAudio: () => void;
   isSynthesizingAudio: boolean;
 }
 
 export const ScriptStudioPane: React.FC<ScriptStudioPaneProps> = ({
-  project,
+  scriptItem,
   voices,
   onUpdateScript,
   onUpdateVoice,
   onSynthesizeAudio,
   isSynthesizingAudio,
 }) => {
-  const script = project.script;
+  const script = scriptItem.script;
   const [newPhoneticKey, setNewPhoneticKey] = useState('');
   const [newPhoneticVal, setNewPhoneticVal] = useState('');
 
@@ -162,7 +162,7 @@ export const ScriptStudioPane: React.FC<ScriptStudioPaneProps> = ({
                 <span>Timed Beat Sheet & Camera Movement Sync</span>
               </label>
               <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                {script.beats.map((beat, idx) => (
+                {script.beats.map((beat: ScriptBeat, idx: number) => (
                   <div
                     key={idx}
                     className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 flex items-start justify-between gap-3 text-xs"
@@ -207,7 +207,7 @@ export const ScriptStudioPane: React.FC<ScriptStudioPaneProps> = ({
                   >
                     <span className="text-amber-400 font-bold">{word}</span>
                     <span className="text-slate-500">➜</span>
-                    <span className="text-emerald-400">{phon}</span>
+                    <span className="text-emerald-400">{String(phon)}</span>
                     <button
                       onClick={() => handleRemovePhonetic(word)}
                       className="text-slate-500 hover:text-rose-400 ml-1 cursor-pointer"
@@ -253,10 +253,10 @@ export const ScriptStudioPane: React.FC<ScriptStudioPaneProps> = ({
                 <span>Voice Actor & Engine Settings</span>
               </label>
 
-              {project.voice.audioUrl && (
+              {scriptItem.voice.audioUrl && (
                 <span className="text-[10px] font-mono text-emerald-400 font-bold flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
-                  <span>Voiceover Ready ({project.voice.durationSeconds}s)</span>
+                  <span>Voiceover Ready ({scriptItem.voice.durationSeconds}s)</span>
                 </span>
               )}
             </div>
@@ -265,7 +265,7 @@ export const ScriptStudioPane: React.FC<ScriptStudioPaneProps> = ({
               <div className="space-y-1">
                 <span className="text-[11px] text-slate-400 font-semibold">Gamer Voice Model</span>
                 <select
-                  value={project.voice.voiceId}
+                  value={scriptItem.voice.voiceId}
                   onChange={(e) => onUpdateVoice({ voiceId: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 focus:outline-none focus:border-emerald-500"
                 >
@@ -280,14 +280,14 @@ export const ScriptStudioPane: React.FC<ScriptStudioPaneProps> = ({
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
                   <span>Speech Speed / Energy</span>
-                  <span className="font-mono text-emerald-400">{project.voice.speed.toFixed(2)}x</span>
+                  <span className="font-mono text-emerald-400">{scriptItem.voice.speed.toFixed(2)}x</span>
                 </div>
                 <input
                   type="range"
                   min="0.85"
                   max="1.35"
                   step="0.05"
-                  value={project.voice.speed}
+                  value={scriptItem.voice.speed}
                   onChange={(e) => onUpdateVoice({ speed: parseFloat(e.target.value) })}
                   className="w-full accent-emerald-500"
                 />
@@ -304,7 +304,7 @@ export const ScriptStudioPane: React.FC<ScriptStudioPaneProps> = ({
               <span>
                 {isSynthesizingAudio
                   ? 'Synthesizing Voiceover Audio...'
-                  : project.voice.audioUrl
+                  : scriptItem.voice.audioUrl
                   ? 'Re-Synthesize Spoken Voiceover'
                   : 'Synthesize Spoken Voiceover (Edge-TTS)'}
               </span>

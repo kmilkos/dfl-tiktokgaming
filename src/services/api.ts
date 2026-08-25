@@ -1,4 +1,4 @@
-import { GameProfile, GamingProject, ProjectContext, ProjectScript, VoiceOption, SystemConfig } from '../types';
+import { GameProfile, GamingProject, GamingScriptItem, ProjectContext, ProjectScript, VoiceOption, SystemConfig } from '../types';
 
 const BASE_URL = '/api';
 
@@ -43,6 +43,58 @@ export async function updateProject(id: string, updates: Partial<GamingProject>)
 export async function deleteProject(id: string): Promise<{ ok: boolean }> {
   const res = await fetch(`${BASE_URL}/projects/${id}`, {
     method: 'DELETE',
+  });
+  return res.json();
+}
+
+export async function addScriptToProject(
+  projectId: string,
+  data?: Partial<GamingScriptItem>
+): Promise<{ success: boolean; script: GamingScriptItem; project: GamingProject }> {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/scripts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data || {}),
+  });
+  return res.json();
+}
+
+export async function updateScriptInProject(
+  projectId: string,
+  scriptId: string,
+  updates: Partial<GamingScriptItem>
+): Promise<{ success: boolean; script: GamingScriptItem; project: GamingProject }> {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/scripts/${scriptId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  return res.json();
+}
+
+export async function deleteScriptFromProject(
+  projectId: string,
+  scriptId: string
+): Promise<{ ok: boolean; project: GamingProject }> {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/scripts/${scriptId}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
+export async function duplicateScriptInProject(
+  projectId: string,
+  scriptId: string
+): Promise<{ success: boolean; script: GamingScriptItem; project: GamingProject }> {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/scripts/${scriptId}/duplicate`, {
+    method: 'POST',
+  });
+  return res.json();
+}
+
+export async function setActiveScript(projectId: string, scriptId: string): Promise<GamingProject> {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/active-script/${scriptId}`, {
+    method: 'PUT',
   });
   return res.json();
 }

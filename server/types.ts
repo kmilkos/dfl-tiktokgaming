@@ -9,11 +9,11 @@ export type GamingContentType =
   | 'update_meta';
 
 export type HookStyleType =
+  | 'warning_mistake'
+  | 'pro_secret'
+  | 'visual_callout'
   | 'question'
   | 'shocking_stat'
-  | 'visual_callout'
-  | 'pro_secret'
-  | 'warning_mistake'
   | 'story_in_media_res';
 
 export type ToneType =
@@ -71,6 +71,7 @@ export interface ProjectImage {
   height: number;
   format: string;
   sizeBytes: number;
+  promptUsed?: string;
 }
 
 export interface ProjectScript {
@@ -108,11 +109,9 @@ export interface ProjectCaptions {
   uppercase: boolean;
 }
 
-export interface GamingProject {
+export interface GamingScriptItem {
   id: string;
   title: string;
-  gameId: string;
-  gameTitle: string;
   createdAt: string;
   updatedAt: string;
   status: 'draft' | 'scripted' | 'voiced' | 'rendered';
@@ -126,6 +125,17 @@ export interface GamingProject {
   visualVibe?: string;
   renderedVideoPath?: string;
   renderedVideoUrl?: string;
+}
+
+export interface GamingProject {
+  id: string;
+  title: string;
+  gameId: string;
+  gameTitle: string;
+  createdAt: string;
+  updatedAt: string;
+  activeScriptId?: string;
+  scripts: GamingScriptItem[];
 }
 
 export interface VoiceOption {

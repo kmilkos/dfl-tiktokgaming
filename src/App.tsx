@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
+import { ProjectScriptsBar } from './components/ProjectScriptsBar';
 import { GamingContextPane } from './components/GamingContextPane';
 import { ScriptStudioPane } from './components/ScriptStudioPane';
 import { GamingPreviewPane } from './components/GamingPreviewPane';
 import { GameSelectorModal } from './components/GameSelectorModal';
 import { ProjectsModal } from './components/ProjectsModal';
 import { SettingsModal } from './components/SettingsModal';
-import { GameProfile, GamingProject, VoiceOption } from './types';
+import { GameProfile, GamingProject, GamingScriptItem, VoiceOption } from './types';
 import {
   fetchGames,
   fetchVoices,
@@ -14,6 +15,11 @@ import {
   createProject,
   updateProject,
   deleteProject,
+  addScriptToProject,
+  updateScriptInProject,
+  deleteScriptFromProject,
+  duplicateScriptInProject,
+  setActiveScript,
   generateGamingScript,
   generateTTS,
   renderVideo,
@@ -53,67 +59,175 @@ export const App: React.FC = () => {
         const matchGame = GAME_PROFILES.find((g) => g.id === projs[0].gameId);
         if (matchGame) setActiveGame(matchGame);
       } else {
-        handleNewProject(GAME_PROFILES[0]);
+        handleNewProjectSeries(GAME_PROFILES[0]);
       }
     }).catch(() => {
-      handleNewProject(GAME_PROFILES[0]);
+      handleNewProjectSeries(GAME_PROFILES[0]);
     });
   }, []);
 
-  const handleNewProject = async (game = activeGame) => {
+  // Compute Active Script
+  const activeScript: GamingScriptItem | null = currentProject
+    ? currentProject.scripts.find((s) => s.id === currentProject.activeScriptId) || currentProject.scripts[0] || null
+    : null;
+
+  // Project Series Operations
+  const handleNewProjectSeries = async (game = activeGame) => {
     try {
       const newProj = await createProject({
         gameId: game.id,
         gameTitle: game.name,
+        title: `${game.name} Pro Series`,
       });
       setCurrentProject(newProj);
       setActiveGame(game);
       setProjects((prev) => [newProj, ...prev]);
     } catch (err) {
-      console.error('Error creating project:', err);
+      console.error('Error creating project series:', err);
     }
   };
 
   const handleSelectGame = (game: GameProfile) => {
     setActiveGame(game);
     if (currentProject) {
-      handleUpdateProject({
+      const updated = {
+        ...currentProject,
         gameId: game.id,
         gameTitle: game.name,
-        context: {
-          ...currentProject.context,
-          gameId: game.id,
-          gameTitle: game.name,
-        },
+        scripts: currentProject.scripts.map((s) => ({
+          ...s,
+          context: { ...s.context, gameId: game.id, gameTitle: game.name },
+        })),
+      };
+      setCurrentProject(updated);
+      updateProject(currentProject.id, {
+        gameId: game.id,
+        gameTitle: game.name,
+        scripts: updated.scripts,
       });
+      setProjects((prev) => prev.map((p) => (p.id === currentProject.id ? updated : p)));
     }
   };
 
-  const handleUpdateProject = async (updates: Partial<GamingProject>) => {
+  const handleUpdateProjectTitle = async (newTitle: string) => {
     if (!currentProject) return;
-    const updated = { ...currentProject, ...updates };
+    const updated = { ...currentProject, title: newTitle };
     setCurrentProject(updated);
+    setProjects((prev) => prev.map((p) => (p.id === currentProject.id ? updated : p)));
     try {
-      await updateProject(currentProject.id, updates);
-      setProjects((prev) => prev.map((p) => (p.id === currentProject.id ? { ...p, ...updates } : p)));
+      await updateProject(currentProject.id, { title: newTitle });
     } catch (err) {
-      console.error('Error updating project:', err);
+      console.error('Error updating project title:', err);
     }
   };
 
-  const handleGenerateScript = async () => {
+  const handleDeleteProject = async (id: string) => {
+    try {
+      await deleteProject(id);
+      const remaining = projects.filter((p) => p.id !== id);
+      setProjects(remaining);
+      if (currentProject?.id === id) {
+        if (remaining.length > 0) {
+          setCurrentProject(remaining[0]);
+          const g = GAME_PROFILES.find((x) => x.id === remaining[0].gameId);
+          if (g) setActiveGame(g);
+        } else {
+          handleNewProjectSeries();
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting project series:', err);
+    }
+  };
+
+  // Script-Level Operations
+  const handleSelectScript = async (scriptId: string) => {
     if (!currentProject) return;
+    const updated = { ...currentProject, activeScriptId: scriptId };
+    setCurrentProject(updated);
+    setProjects((prev) => prev.map((p) => (p.id === currentProject.id ? updated : p)));
+    try {
+      await setActiveScript(currentProject.id, scriptId);
+    } catch (err) {
+      console.error('Error setting active script:', err);
+    }
+  };
+
+  const handleAddScript = async (projectId = currentProject?.id) => {
+    if (!projectId) return;
+    try {
+      const res = await addScriptToProject(projectId);
+      if (res.success && res.project) {
+        setCurrentProject(res.project);
+        setProjects((prev) => prev.map((p) => (p.id === projectId ? res.project : p)));
+      }
+    } catch (err) {
+      console.error('Error adding script:', err);
+    }
+  };
+
+  const handleDuplicateScript = async (scriptId: string) => {
+    if (!currentProject) return;
+    try {
+      const res = await duplicateScriptInProject(currentProject.id, scriptId);
+      if (res.success && res.project) {
+        setCurrentProject(res.project);
+        setProjects((prev) => prev.map((p) => (p.id === currentProject.id ? res.project : p)));
+      }
+    } catch (err) {
+      console.error('Error duplicating script:', err);
+    }
+  };
+
+  const handleDeleteScript = async (projectId: string, scriptId: string) => {
+    try {
+      const res = await deleteScriptFromProject(projectId, scriptId);
+      if (res.ok && res.project) {
+        setCurrentProject(res.project);
+        setProjects((prev) => prev.map((p) => (p.id === projectId ? res.project : p)));
+      }
+    } catch (err: any) {
+      alert(`Delete Script: ${err.message || err}`);
+    }
+  };
+
+  const handleUpdateScriptTitle = async (scriptId: string, newTitle: string) => {
+    if (!currentProject) return;
+    handleUpdateActiveScript({ title: newTitle });
+  };
+
+  const handleUpdateActiveScript = async (updates: Partial<GamingScriptItem>) => {
+    if (!currentProject || !activeScript) return;
+    const updatedScript = { ...activeScript, ...updates, updatedAt: new Date().toISOString() };
+    const updatedProject = {
+      ...currentProject,
+      scripts: currentProject.scripts.map((s) => (s.id === activeScript.id ? updatedScript : s)),
+    };
+    setCurrentProject(updatedProject);
+    setProjects((prev) => prev.map((p) => (p.id === currentProject.id ? updatedProject : p)));
+
+    try {
+      await updateScriptInProject(currentProject.id, activeScript.id, updates);
+    } catch (err) {
+      console.error('Error updating script:', err);
+    }
+  };
+
+  // Generation & Voice Actions for Active Script
+  const handleGenerateScript = async () => {
+    if (!currentProject || !activeScript) return;
     try {
       setIsGeneratingScript(true);
       const res = await generateGamingScript(
-        currentProject.image?.path,
-        currentProject.context
+        activeScript.image?.path,
+        activeScript.context
       );
-      handleUpdateProject({
+      handleUpdateActiveScript({
         script: res.script,
         detectedElements: res.detectedElements,
         visualVibe: res.visualVibe,
         status: 'scripted',
+        title: activeScript.context.topic || res.script.hook.slice(0, 30) || activeScript.title,
       });
     } catch (err: any) {
       alert(`Script Generation Failed: ${err.message || err}`);
@@ -123,19 +237,19 @@ export const App: React.FC = () => {
   };
 
   const handleSynthesizeAudio = async () => {
-    if (!currentProject || !currentProject.script?.spokenText) return;
+    if (!currentProject || !activeScript || !activeScript.script?.spokenText) return;
     try {
       setIsSynthesizingAudio(true);
       const res = await generateTTS(
-        currentProject.script.spokenText,
-        currentProject.voice.voiceId,
-        currentProject.voice.engine,
-        currentProject.voice.speed,
-        currentProject.script.phoneticOverrides
+        activeScript.script.spokenText,
+        activeScript.voice.voiceId,
+        activeScript.voice.engine,
+        activeScript.voice.speed,
+        activeScript.script.phoneticOverrides
       );
-      handleUpdateProject({
+      handleUpdateActiveScript({
         voice: {
-          ...currentProject.voice,
+          ...activeScript.voice,
           audioPath: res.audioPath,
           audioUrl: res.audioUrl,
           durationSeconds: res.durationSeconds,
@@ -150,13 +264,17 @@ export const App: React.FC = () => {
   };
 
   const handleRenderVideo = async () => {
-    if (!currentProject) return;
+    if (!currentProject || !activeScript) return;
     try {
       setIsRenderingVideo(true);
-      setRenderProgress(10);
-      const res = await renderVideo(currentProject);
+      setRenderProgress(15);
+      const res = await renderVideo({
+        ...activeScript,
+        gameId: currentProject.gameId,
+        gameTitle: currentProject.gameTitle,
+      } as any);
       setRenderProgress(100);
-      handleUpdateProject({
+      handleUpdateActiveScript({
         renderedVideoPath: res.outputPath,
         renderedVideoUrl: res.videoUrl,
         status: 'rendered',
@@ -168,66 +286,64 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleDeleteProject = async (id: string) => {
-    try {
-      await deleteProject(id);
-      setProjects((prev) => prev.filter((p) => p.id !== id));
-      if (currentProject?.id === id) {
-        const remaining = projects.filter((p) => p.id !== id);
-        if (remaining.length > 0) {
-          setCurrentProject(remaining[0]);
-        } else {
-          handleNewProject();
-        }
-      }
-    } catch (err) {
-      console.error('Error deleting project:', err);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500/30 selection:text-emerald-300">
       
       {/* Navigation Header */}
       <Navbar
         currentProject={currentProject}
+        activeScriptTitle={activeScript?.title}
         activeGame={activeGame}
         onOpenGameSelector={() => setIsGameSelectorOpen(true)}
-        onNewProject={() => handleNewProject(activeGame)}
+        onNewProjectSeries={() => handleNewProjectSeries(activeGame)}
         onOpenProjects={() => setIsProjectsOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         isRendering={isRenderingVideo}
       />
 
+      {/* Project Series & Nested Scripts Bar */}
+      {currentProject && activeScript && (
+        <ProjectScriptsBar
+          project={currentProject}
+          activeScript={activeScript}
+          onSelectScript={handleSelectScript}
+          onAddScript={() => handleAddScript(currentProject.id)}
+          onDuplicateScript={handleDuplicateScript}
+          onDeleteScript={(sId) => handleDeleteScript(currentProject.id, sId)}
+          onUpdateProjectTitle={handleUpdateProjectTitle}
+          onUpdateScriptTitle={handleUpdateScriptTitle}
+        />
+      )}
+
       {/* Main 3-Column Workstation Layout */}
-      {currentProject ? (
-        <main className="flex-1 w-full mx-auto px-4 lg:px-8 py-5">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-6rem)]">
+      {currentProject && activeScript ? (
+        <main className="flex-1 w-full mx-auto px-4 lg:px-8 py-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-9.5rem)]">
             
-            {/* Column 1: Context & Ingestion (3.5 cols) */}
+            {/* Column 1: Context & Ingestion (4 cols) */}
             <div className="lg:col-span-4 h-full">
               <GamingContextPane
-                project={currentProject}
+                scriptItem={activeScript}
                 activeGame={activeGame}
                 onUpdateContext={(ctx) =>
-                  handleUpdateProject({ context: { ...currentProject.context, ...ctx } })
+                  handleUpdateActiveScript({ context: { ...activeScript.context, ...ctx } })
                 }
-                onUpdateImage={(img) => handleUpdateProject({ image: img })}
+                onUpdateImage={(img) => handleUpdateActiveScript({ image: img })}
                 onGenerateScript={handleGenerateScript}
                 isGeneratingScript={isGeneratingScript}
               />
             </div>
 
-            {/* Column 2: Scriptcraft & Voice Studio (4.5 cols) */}
+            {/* Column 2: Scriptcraft & Voice Studio (4 cols) */}
             <div className="lg:col-span-4 h-full">
               <ScriptStudioPane
-                project={currentProject}
+                scriptItem={activeScript}
                 voices={voices}
                 onUpdateScript={(s) =>
-                  handleUpdateProject({ script: { ...currentProject.script!, ...s } })
+                  handleUpdateActiveScript({ script: { ...activeScript.script!, ...s } })
                 }
                 onUpdateVoice={(v) =>
-                  handleUpdateProject({ voice: { ...currentProject.voice, ...v } })
+                  handleUpdateActiveScript({ voice: { ...activeScript.voice, ...v } })
                 }
                 onSynthesizeAudio={handleSynthesizeAudio}
                 isSynthesizingAudio={isSynthesizingAudio}
@@ -237,12 +353,12 @@ export const App: React.FC = () => {
             {/* Column 3: 9:16 Video & Preview (4 cols) */}
             <div className="lg:col-span-4 h-full">
               <GamingPreviewPane
-                project={currentProject}
+                scriptItem={activeScript}
                 onUpdateMotion={(m) =>
-                  handleUpdateProject({ motion: { ...currentProject.motion, ...m } })
+                  handleUpdateActiveScript({ motion: { ...activeScript.motion, ...m } })
                 }
                 onUpdateCaptions={(c) =>
-                  handleUpdateProject({ captions: { ...currentProject.captions, ...c } })
+                  handleUpdateActiveScript({ captions: { ...activeScript.captions, ...c } })
                 }
                 onRenderVideo={handleRenderVideo}
                 isRenderingVideo={isRenderingVideo}
@@ -272,15 +388,19 @@ export const App: React.FC = () => {
         onClose={() => setIsProjectsOpen(false)}
         projects={projects}
         currentProjectId={currentProject?.id || null}
-        onSelectProject={(id) => {
-          const p = projects.find((x) => x.id === id);
+        currentScriptId={activeScript?.id || null}
+        onSelectProject={(projId, scriptId) => {
+          const p = projects.find((x) => x.id === projId);
           if (p) {
-            setCurrentProject(p);
+            const updated = scriptId ? { ...p, activeScriptId: scriptId } : p;
+            setCurrentProject(updated);
             const g = GAME_PROFILES.find((x) => x.id === p.gameId);
             if (g) setActiveGame(g);
           }
         }}
         onDeleteProject={handleDeleteProject}
+        onAddScriptToProject={(projId) => handleAddScript(projId)}
+        onDeleteScriptFromProject={handleDeleteScript}
       />
 
       <SettingsModal

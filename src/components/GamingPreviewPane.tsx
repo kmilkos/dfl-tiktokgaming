@@ -16,19 +16,19 @@ import {
   Type,
   Maximize2,
 } from 'lucide-react';
-import { GamingProject, MotionStyleType } from '../types';
+import { GamingScriptItem, MotionStyleType } from '../types';
 
 interface GamingPreviewPaneProps {
-  project: GamingProject;
-  onUpdateMotion: (motion: Partial<GamingProject['motion']>) => void;
-  onUpdateCaptions: (captions: Partial<GamingProject['captions']>) => void;
+  scriptItem: GamingScriptItem;
+  onUpdateMotion: (motion: Partial<GamingScriptItem['motion']>) => void;
+  onUpdateCaptions: (captions: Partial<GamingScriptItem['captions']>) => void;
   onRenderVideo: () => void;
   isRenderingVideo: boolean;
   renderProgress: number;
 }
 
 export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
-  project,
+  scriptItem,
   onUpdateMotion,
   onUpdateCaptions,
   onRenderVideo,
@@ -41,13 +41,13 @@ export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
   const [duration, setDuration] = useState(0);
 
   useEffect(() => {
-    if (project.voice.durationSeconds) {
-      setDuration(project.voice.durationSeconds);
+    if (scriptItem.voice.durationSeconds) {
+      setDuration(scriptItem.voice.durationSeconds);
     }
-  }, [project.voice.durationSeconds]);
+  }, [scriptItem.voice.durationSeconds]);
 
   const togglePlay = () => {
-    if (!audioRef.current || !project.voice.audioUrl) return;
+    if (!audioRef.current || !scriptItem.voice.audioUrl) return;
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
@@ -69,7 +69,7 @@ export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
   };
 
   // Find active beat / subtitle text
-  const currentBeat = project.script?.beats?.find((b, idx, arr) => {
+  const currentBeat = scriptItem.script?.beats?.find((b, idx, arr) => {
     const nextBeatTime = arr[idx + 1] ? arr[idx + 1].timeSec : 999;
     return currentTime >= b.timeSec && currentTime < nextBeatTime;
   });
@@ -110,20 +110,20 @@ export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
           <div className="absolute top-2 left-0 right-0 z-20 flex items-center justify-between px-4 text-[9px] font-mono text-white/80">
             <span>DFL GAMING</span>
             <span className="w-12 h-3.5 rounded-full bg-slate-900/90 border border-slate-800 mx-auto" />
-            <span className="text-emerald-400 font-bold">{project.context.targetDuration}s</span>
+            <span className="text-emerald-400 font-bold">{scriptItem.context.targetDuration}s</span>
           </div>
 
           {/* Background Screenshot with Camera Motion Simulation */}
           <div className="absolute inset-0 z-0 overflow-hidden bg-slate-950">
-            {project.image ? (
+            {scriptItem.image ? (
               <img
-                src={project.image.url}
+                src={scriptItem.image.url}
                 alt="Gaming Preview"
                 className={`w-full h-full object-cover transition-transform duration-700 ${
                   isPlaying ? 'scale-125' : 'scale-100'
                 }`}
                 style={{
-                  transformOrigin: `${(project.motion.focusPoint?.x ?? 0.5) * 100}% ${(project.motion.focusPoint?.y ?? 0.5) * 100}%`,
+                  transformOrigin: `${(scriptItem.motion.focusPoint?.x ?? 0.5) * 100}% ${(scriptItem.motion.focusPoint?.y ?? 0.5) * 100}%`,
                 }}
               />
             ) : (
@@ -137,10 +137,10 @@ export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
 
           {/* Center Dynamic Karaoke Captions */}
           <div className="relative z-10 my-auto px-4 text-center">
-            {project.captions.enabled && (
+            {scriptItem.captions.enabled && (
               <div className="space-y-1">
                 <p className="font-extrabold text-sm sm:text-base tracking-wide uppercase text-yellow-300 drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-stroke-sm font-sans leading-snug">
-                  {currentBeat?.text || project.script?.hook || project.title}
+                  {currentBeat?.text || scriptItem.script?.hook || scriptItem.title}
                 </p>
                 {currentBeat?.visualFocus && (
                   <span className="inline-block px-2 py-0.5 rounded-md bg-black/80 text-[9px] font-mono text-cyan-300 border border-cyan-500/40">
@@ -154,18 +154,18 @@ export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
           {/* Bottom TikTok UI Overlay Simulation */}
           <div className="relative z-10 p-3 bg-gradient-to-t from-black/90 to-transparent space-y-1">
             <p className="text-[10px] font-bold text-white truncate">
-              @{project.gameTitle.toLowerCase().replace(/\s+/g, '')}_pro
+              @{scriptItem.context.gameTitle.toLowerCase().replace(/\s+/g, '')}_pro
             </p>
             <p className="text-[9px] text-slate-300 line-clamp-1">
-              {project.script?.hook || project.context.topic} #shorts #{project.gameId}
+              {scriptItem.script?.hook || scriptItem.context.topic} #shorts #{scriptItem.context.gameId}
             </p>
           </div>
 
           {/* Hidden Audio Player */}
-          {project.voice.audioUrl && (
+          {scriptItem.voice.audioUrl && (
             <audio
               ref={audioRef}
-              src={project.voice.audioUrl}
+              src={scriptItem.voice.audioUrl}
               onTimeUpdate={handleTimeUpdate}
               onEnded={handleEnded}
             />
@@ -174,7 +174,7 @@ export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
       </div>
 
       {/* Audio Playback Controls & Wave Scrubber */}
-      {project.voice.audioUrl && (
+      {scriptItem.voice.audioUrl && (
         <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
           <div className="flex items-center justify-between text-xs font-mono text-slate-400">
             <span className="text-emerald-400 font-bold">{currentTime.toFixed(1)}s</span>
@@ -229,7 +229,7 @@ export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
         <div className="space-y-1">
           <label className="text-[11px] font-semibold text-slate-400">Camera Motion</label>
           <select
-            value={project.motion.style}
+            value={scriptItem.motion.style}
             onChange={(e) => onUpdateMotion({ style: e.target.value as MotionStyleType })}
             className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 focus:outline-none focus:border-emerald-500"
           >
@@ -244,7 +244,7 @@ export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
         <div className="space-y-1">
           <label className="text-[11px] font-semibold text-slate-400">Captions Style</label>
           <select
-            value={project.captions.style}
+            value={scriptItem.captions.style}
             onChange={(e) => onUpdateCaptions({ style: e.target.value as any })}
             className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 focus:outline-none focus:border-emerald-500"
           >
@@ -262,7 +262,7 @@ export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
           <span className="text-cyan-400 font-bold truncate max-w-[180px]">/outer/Downloads/DFLTikTokGaming</span>
         </div>
 
-        {project.renderedVideoUrl ? (
+        {scriptItem.renderedVideoUrl ? (
           <div className="space-y-2">
             <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-800/60 text-emerald-300 text-xs font-mono flex items-center justify-between">
               <span className="flex items-center gap-1.5">
@@ -270,7 +270,7 @@ export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
                 <span>Video Rendered!</span>
               </span>
               <a
-                href={project.renderedVideoUrl}
+                href={scriptItem.renderedVideoUrl}
                 download
                 className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1 shadow-md transition-colors"
               >
@@ -291,7 +291,7 @@ export const GamingPreviewPane: React.FC<GamingPreviewPaneProps> = ({
         ) : (
           <button
             onClick={onRenderVideo}
-            disabled={isRenderingVideo || !project.voice.audioPath || !project.image}
+            disabled={isRenderingVideo || !scriptItem.voice.audioPath || !scriptItem.image}
             className="w-full py-3.5 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 hover:from-purple-500 hover:to-red-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30 transition-all cursor-pointer disabled:opacity-50"
           >
             {isRenderingVideo ? (
