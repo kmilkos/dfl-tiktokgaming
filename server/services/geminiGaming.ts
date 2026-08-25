@@ -65,7 +65,7 @@ export async function generateGamingScript(
 
   const gameProfile = getGameProfile(context.gameId);
   const genAI = new GoogleGenerativeAI(apiKey);
-  const candidateModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-pro'];
+  const candidateModels = ['gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.1-pro-preview'];
   const genConfig = {
     temperature: 0.85,
     topP: 0.95,

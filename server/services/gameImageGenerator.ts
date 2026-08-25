@@ -5,9 +5,10 @@ import axios from 'axios';
 import { getConfig } from '../config.js';
 import { getGameProfile } from '../data/games.js';
 import {
-  synthesizeBlueprintDataWithGemini,
-  generateBlueprintSVG,
+  synthesizeFicsitDataWithGemini,
+  generateFicsitSVG,
   renderBlueprintToPNG,
+  FicsitTemplateType,
 } from './proceduralBlueprint.js';
 
 const httpsAgent = new https.Agent({ family: 4, keepAlive: true });
@@ -20,93 +21,108 @@ export interface GameImageGenParams {
   gameId?: string;
   styleMode?: ImageStyleMode;
   engine?: GeneratorEngineType;
+  templateType?: FicsitTemplateType;
   enhanceWithAI?: boolean;
   aspectRatio?: '9:16' | '16:9' | '1:1';
 }
 
-export const GAME_INFOGRAPHIC_PRESETS: Record<string, { label: string; prompt: string; type: string }[]> = {
+export const FICSIT_NEGATIVE_PROMPT =
+  'blurry, low resolution, unreadable gibberish text, chaotic wires, messy layout, photorealistic human faces, organic landscape, soft watercolor, curved distorted lines, bad spelling, overlapping unaligned text cards, dirty lens, low contrast, cropped borders, 1:1 square, 16:9 landscape';
+
+export const GAME_INFOGRAPHIC_PRESETS: Record<
+  string,
+  { label: string; prompt: string; type: string; templateType: FicsitTemplateType }[]
+> = {
   satisfactory: [
     {
-      label: '⚡ The Iron-Only Assembly (Zero Screws)',
+      label: '⚡ The Iron-Only Assembly (Total Consolidation)',
       prompt: 'The Iron-Only Assembly for Reinforced Iron Plates using Stitched Iron Plate and Iron Wire alternate recipes to eliminate copper and screws',
-      type: 'Optimization Flowchart',
+      type: 'Flowchart Consolidation',
+      templateType: 'FLOWCHART_CONSOLIDATION',
     },
     {
-      label: '🔩 Cast Screws Alternate Recipe',
-      prompt: 'Cast Screws M.A.M. alternate recipe: Convert Iron Ingots directly into Screws at 50/min, eliminating Iron Rods',
-      type: 'Recipe Blueprint',
+      label: '🔩 Cast Screws: Standard vs. Alternate',
+      prompt: 'Cast Screws Alternate Recipe: Convert Iron Ingots directly to Screws (50/min), bypassing Iron Rods',
+      type: 'Comparison Stack',
+      templateType: 'COMPARISON',
     },
     {
-      label: '🔥 Infinite Turbofuel Power Grid',
-      prompt: 'Infinite Turbofuel Power Plant Ratio Blueprint: 300 Crude Oil to 800 Turbofuel feeding 44 Fuel Generators with Heavy Oil Residue and Diluted Fuel',
-      type: 'Power Ratio Guide',
+      label: '🚫 Screw Bottleneck Eradication (Problem vs. Solution)',
+      prompt: 'Screw Bottleneck Eradication: Problem (huge belt congestion with screws) vs. Solution (Stitched Plates + Iron Wire)',
+      type: 'Problem vs. Solution',
+      templateType: 'PROBLEM_SOLUTION',
+    },
+    {
+      label: '🔥 Infinite Turbofuel Power Grid Masterclass',
+      prompt: 'Infinite Turbofuel Power Plant Ratio: 300 Crude Oil to 800 Turbofuel feeding 44 Fuel Generators with Heavy Oil Residue',
+      type: 'Logistics Masterclass',
+      templateType: 'FLOWCHART_CONSOLIDATION',
     },
     {
       label: '☢️ Zero Nuclear Waste Plutonium Loop',
-      prompt: 'FICSIT Zero Nuclear Waste Recycling Schematic: Uranium Waste to Plutonium Fuel Rods to Sink conversion loop with exact machine ratios',
-      type: 'Recycling Matrix',
-    },
-    {
-      label: '⚙️ Manifold vs Load Balancer Throughput',
-      prompt: 'Conveyor Belt Throughput Masterclass: Manifold vs Load Balancing math comparison with Mk.5 Belts and Smart Splitter overflows',
-      type: 'Logistics Blueprint',
+      prompt: 'FICSIT Zero Nuclear Waste Recycling: Uranium Waste to Plutonium Fuel Rods to Sink conversion loop',
+      type: 'Recycling Flowchart',
+      templateType: 'FLOWCHART_CONSOLIDATION',
     },
   ],
   enshrouded: [
     {
       label: '🌫️ Flame Altar Level 6 Progression Matrix',
-      prompt: 'Embervale Flame Altar Level 6 Upgrade Guide: Spark locations, Shroud core crafting, passage timer multipliers, and biome unlocks',
-      type: 'Progression Map',
+      prompt: 'Flame Altar Level 6 Upgrade Guide: Spark locations, Shroud core crafting, and passage timer multipliers',
+      type: 'Progression Flowchart',
+      templateType: 'FLOWCHART_CONSOLIDATION',
     },
     {
-      label: '🪽 Infinite Glider & Updraft Stamina Skip',
-      prompt: 'Infinite Glider Flight Mechanics: Ghost Glider stamina efficiency, updraft boosting skill tree synergy, and traversal skips',
-      type: 'Traversal Guide',
-    },
-    {
-      label: '💎 Level 25 Legendary Chest Farming Route',
-      prompt: 'Sun Temple Level 25 Golden Chest Farm Route: Fast travel altar placement, reload timers, and highest DPS weapon drop rates',
-      type: 'Loot Route Blueprint',
+      label: '🪽 Infinite Glider Stamina Optimization',
+      prompt: 'Infinite Glider Mechanics: Standard Glider stamina drain vs. Ghost Glider updraft skill synergy',
+      type: 'Problem vs. Solution',
+      templateType: 'PROBLEM_SOLUTION',
     },
   ],
   valheim: [
     {
-      label: '🛡️ Structural Integrity & Beam Weight Math',
-      prompt: 'Viking Structural Physics Blueprint: Blue to Red beam stability load calculation, iron wood pole reinforcement, and maximum roof height math',
-      type: 'Structural Physics',
+      label: '🛡️ Structural Integrity & Beam Stability Math',
+      prompt: 'Viking Structural Physics Blueprint: Standard wood beam collapse vs. Iron wood reinforced high roof stability',
+      type: 'Comparison Stack',
+      templateType: 'COMPARISON',
     },
     {
-      label: '⚔️ Ashlands Fortress Siege Defense Setup',
-      prompt: 'Ashlands Fortress Conquest Strategy: Battering ram mechanics, catapult fire trajectory, and anti-Charred shield barrier placement',
-      type: 'Combat Blueprint',
-    },
-  ],
-  subnautica: [
-    {
-      label: '🔋 Cyclops Infinite Thermal Power & Depth',
-      prompt: 'Cyclops Deep Sea Power Optimization: Thermal Reactor placement near volcanic vents and Ion Power Cell efficiency cycle',
-      type: 'Submersible Schematic',
+      label: '⚔️ Ashlands Siege Engine Assembly',
+      prompt: 'Ashlands Fortress Siege Strategy: Battering ram mechanics, catapult fire trajectory, and anti-Charred shield placement',
+      type: 'Logistics Masterclass',
+      templateType: 'FLOWCHART_CONSOLIDATION',
     },
   ],
   factorio: [
     {
       label: '🧪 Perfect 45 SPM Science Pack Ratio Matrix',
-      prompt: 'Optimal 45 SPM All Science Packs Production Ratio: Assembler counts, smelter columns, and input conveyor line calculations',
-      type: 'Factory Matrix',
+      prompt: 'Optimal 45 SPM Science Pack Production Ratio: Raw Ore inputs splitting to Red and Green science assemblers',
+      type: 'Flowchart Consolidation',
+      templateType: 'FLOWCHART_CONSOLIDATION',
     },
   ],
   rust: [
     {
-      label: '🏰 Unraidable 2x2 Bunker Base Metagame',
-      prompt: 'Unraidable Pixel-Gap Bunker Base Architecture: Roof stability exploit, triangle honeycomb, and high-rocket cost math',
-      type: 'Base Defense CAD',
+      label: '🏰 Unraidable Pixel-Gap Bunker Base CAD',
+      prompt: 'Pixel-Gap Bunker Base Architecture: Standard 2x2 soft side weakness vs. Roof stability bunker exploit',
+      type: 'Problem vs. Solution',
+      templateType: 'PROBLEM_SOLUTION',
     },
   ],
   palworld: [
     {
-      label: '🥚 Perfect 4-Passive Breeding Inheritance',
+      label: '🥚 Perfect 4-Passive Breeding Lineage Tree',
       prompt: 'Legendary 4-Passive Trait Breeding Tree: Parent cross-breeding lineage for Legend, Musclehead, Ferocious, and Burly Body',
-      type: 'Breeding Lineage',
+      type: 'Breeding Flowchart',
+      templateType: 'FLOWCHART_CONSOLIDATION',
+    },
+  ],
+  subnautica: [
+    {
+      label: '🔋 Cyclops Infinite Thermal Power & Depth',
+      prompt: 'Cyclops Deep Sea Power Optimization: Standard Power Cells vs. Thermal Reactor near volcanic vents with Ion Cells',
+      type: 'Comparison Stack',
+      templateType: 'COMPARISON',
     },
   ],
 };
@@ -118,18 +134,19 @@ export async function generateGameImage(
   const gameId = params.gameId || 'satisfactory';
   const styleMode = params.styleMode || 'infographic';
   const engine = params.engine || (styleMode === 'infographic' ? 'procedural' : 'flux');
+  const templateType: FicsitTemplateType = params.templateType || 'FLOWCHART_CONSOLIDATION';
 
   const width = 1080;
   const height = 1920;
 
-  // 1. Procedural Vector Infographic Engine (100% Sharp Text, CAD Grid & Machine Nodes)
+  // 1. Procedural Vector Infographic Engine (FICSIT Design System v1.0.0)
   if (styleMode === 'infographic' && (engine === 'procedural' || !engine)) {
     try {
-      console.log(`[ImageGen] Synthesizing 9:16 Procedural Vector Blueprint for ${gameId}...`);
-      const blueprintData = await synthesizeBlueprintDataWithGemini(gameId, params.prompt);
-      const svgContent = generateBlueprintSVG(blueprintData);
-      
-      const filename = `dfl-blueprint-${gameId}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}.png`;
+      console.log(`[FICSIT ImageGen] Synthesizing 9:16 ${templateType} blueprint for ${gameId}...`);
+      const ficsitData = await synthesizeFicsitDataWithGemini(gameId, params.prompt, templateType);
+      const svgContent = generateFicsitSVG(ficsitData);
+
+      const filename = `ficsit-${templateType.toLowerCase()}-${gameId}-${Date.now()}.png`;
       const outputPath = path.join(config.paths.uploads, filename);
 
       await renderBlueprintToPNG(svgContent, outputPath);
@@ -140,16 +157,16 @@ export async function generateGameImage(
           url: `/api/media/stream?path=${encodeURIComponent(outputPath)}`,
           width,
           height,
-          promptUsed: `${blueprintData.title} - ${blueprintData.subtitle}`,
-          engineUsed: 'procedural_vector',
+          promptUsed: `${ficsitData.header.title} ${ficsitData.header.subtitle}`,
+          engineUsed: `ficsit_vector_${templateType.toLowerCase()}`,
         };
       }
     } catch (err: any) {
-      console.warn('[ImageGen] Procedural Blueprint failed, falling back:', err.message);
+      console.warn('[FICSIT ImageGen] Vector Blueprint failed, falling back:', err.message);
     }
   }
 
-  // 2. Google Gemini Native Image Generation (Supported on Gemini keys with Image Generation quota enabled)
+  // 2. Google Gemini Native Image Generation (if supported on active key)
   if (config.geminiApiKey && (engine === 'gemini_image' || !engine)) {
     const geminiModels = ['gemini-2.5-flash-image', 'gemini-3.1-flash-image', 'gemini-3-pro-image'];
     for (const model of geminiModels) {
@@ -158,7 +175,7 @@ export async function generateGameImage(
         const googleRes = await axios.post(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.geminiApiKey}`,
           {
-            contents: [{ parts: [{ text: `Generate a 9:16 vertical gaming visual card: ${params.prompt}` }] }],
+            contents: [{ parts: [{ text: `Generate a vertical 9:16 FICSIT industrial infographic: ${params.prompt}` }] }],
             generationConfig: { responseModalities: ['IMAGE'] },
           },
           { timeout: 20000, httpsAgent }
@@ -186,24 +203,28 @@ export async function generateGameImage(
     }
   }
 
-  // 3. High-Quality Flux / Turbo Diffusion Engine
+  // 3. High-Quality Flux / Turbo Diffusion Engine (Structured with Section 4 Templates + Section 6 Negatives)
   const gameProfile = getGameProfile(gameId);
   const promptSeed = Math.floor(Math.random() * 1000000);
 
-  const enhancedPrompt =
-    styleMode === 'infographic'
-      ? `Ultra-detailed technical industrial gaming infographic blueprint card for ${gameProfile.name} about "${params.prompt}". Dark blue CAD grid background, isometric machine icons, glowing neon cyan and amber flowchart boxes, recipe ratios, sharp UI stats badges, high contrast typography, 8k resolution, 9:16 vertical poster format.`
-      : `Cinematic 8k photorealistic vertical 9:16 game screenshot of "${params.prompt}" in ${gameProfile.name}. Unreal Engine 5 visual fidelity, volumetric atmospheric lighting, raytraced reflections, hyper-detailed environment.`;
+  let promptTemplate = '';
+  if (templateType === 'COMPARISON') {
+    promptTemplate = `Vertical 9:16 aspect ratio industrial infographic, Satisfactory video game FICSIT technical style. Background: Dark industrial blue (#14202C) textured with faint CAD technical grid and orange hazard diagonal stripes. Header: Bold industrial top banner reading "FICSIT INC. PRODUCTION GUIDE: ALTERNATE RECIPE". Subheader: Large bold uppercase text "${params.prompt}" framed by orange hazard warning stripes. Section 1 (Standard Recipe): Dark UI panel labeled "Standard" with vertical process chain and rate metrics. Section 2 (Alternate Recipe): Dark UI panel labeled "Alternate" with bright highlight border and optimal throughput rates. Footer: Solid FICSIT orange bar with black bold industrial text verdict. Render style: Clean vector UI containers, isometric machinery schematics, high contrast, clean typography, 8k resolution.`;
+  } else if (templateType === 'PROBLEM_SOLUTION') {
+    promptTemplate = `Vertical 9:16 aspect ratio industrial infographic, Satisfactory FICSIT sci-fi UI aesthetic. Background: Matte gunmetal grey (#1C1E22) with glowing amber UI telemetry and subtle technical schematics. Header: "FICSIT INC. PRODUCTION GUIDE: ALTERNATE RECIPE" with title "${params.prompt}". Top Block (The Problem): Amber-bordered UI container titled "THE PROBLEM" with glowing red "X" over bottleneck item. Bottom Block (The Solution): Amber-bordered UI container titled "THE SOLUTION" with glowing green checkmark over optimal item. Footer: Dark banner with glowing orange border and bold uppercase text verdict. Render style: Precision CAD blueprint overlay, vibrant UI indicators, isometric game asset styling, razor sharp.`;
+  } else {
+    promptTemplate = `Vertical 9:16 aspect ratio industrial blueprint infographic, Satisfactory FICSIT aesthetic. Background: Deep steel blue (#131E29) with intricate technical machinery blueprint line art. Header: Top industrial banner reading "FICSIT INC. LOGISTICS MASTERCLASS". Title: Large bold text "${params.prompt}". Center Flowchart Layout: Top Root Node with splitting arrows, Path A (Left) with machines and rates, Path B (Right) with machines and rates, Convergence Assembler node, and Bottom Output Node. Side Callout Box: Blueprint note card titled "The Math Callout". Footer: Bright industrial FICSIT orange banner. Details: Corner bolts, small industrial screws and spools on border margins, crisp corporate FICSIT branding, 8k resolution.`;
+  }
 
-  const filename = `dfl-ai-${styleMode}-${gameId}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}.jpg`;
+  const filename = `dfl-ficsit-${templateType.toLowerCase()}-${gameId}-${Date.now()}.jpg`;
   const outputPath = path.join(config.paths.uploads, filename);
 
-  const encoded = encodeURIComponent(enhancedPrompt.slice(0, 500));
+  const encodedPrompt = encodeURIComponent(promptTemplate.slice(0, 500));
   const models = ['flux', 'turbo'];
 
   for (const m of models) {
     try {
-      const url = `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&seed=${promptSeed}&nologo=true&model=${m}`;
+      const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${promptSeed}&nologo=true&model=${m}&negative=${encodeURIComponent(FICSIT_NEGATIVE_PROMPT)}`;
       const res = await axios.get(url, {
         responseType: 'arraybuffer',
         httpsAgent,
@@ -217,8 +238,8 @@ export async function generateGameImage(
           url: `/api/media/stream?path=${encodeURIComponent(outputPath)}`,
           width,
           height,
-          promptUsed: enhancedPrompt,
-          engineUsed: `ai_${m}`,
+          promptUsed: promptTemplate,
+          engineUsed: `ai_${m}_${templateType.toLowerCase()}`,
         };
       }
     } catch (err: any) {

@@ -48,12 +48,13 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
   const [imageMode, setImageMode] = useState<'ai_generate' | 'upload' | 'url'>('ai_generate');
   const [styleMode, setStyleMode] = useState<'infographic' | 'cinematic'>('infographic');
   const [engineMode, setEngineMode] = useState<'procedural' | 'flux'>('procedural');
+  const [templateType, setTemplateType] = useState<'FLOWCHART_CONSOLIDATION' | 'COMPARISON' | 'PROBLEM_SOLUTION'>('FLOWCHART_CONSOLIDATION');
   const [customImagePrompt, setCustomImagePrompt] = useState('');
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [enhancePromptWithAI, setEnhancePromptWithAI] = useState(true);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [imagePresets, setImagePresets] = useState<Record<string, { label: string; prompt: string; type?: string }[]>>({});
+  const [imagePresets, setImagePresets] = useState<Record<string, { label: string; prompt: string; type?: string; templateType?: any }[]>>({});
 
   useEffect(() => {
     fetchImagePresets().then(setImagePresets).catch(() => {});
@@ -88,10 +89,15 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
     }
   };
 
-  const handleGenerateAIImage = async (promptToUse?: string, forcedStyle?: 'infographic' | 'cinematic') => {
+  const handleGenerateAIImage = async (
+    promptToUse?: string,
+    forcedStyle?: 'infographic' | 'cinematic',
+    forcedTemplate?: 'FLOWCHART_CONSOLIDATION' | 'COMPARISON' | 'PROBLEM_SOLUTION'
+  ) => {
     const p = promptToUse || customImagePrompt;
     if (!p.trim()) return;
     const targetStyle = forcedStyle || styleMode;
+    const targetTemplate = forcedTemplate || templateType;
     try {
       setIsGeneratingImage(true);
       const res = await generateGameImage(
@@ -99,14 +105,15 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
         activeGame.id,
         targetStyle,
         enhancePromptWithAI,
-        engineMode
+        engineMode,
+        targetTemplate
       );
       if (res.success && res.image) {
         onUpdateImage(res.image);
       }
     } catch (err: any) {
       if (err.quotaInfo?.isQuotaError && onTriggerQuotaAlert) {
-        onTriggerQuotaAlert(err.quotaInfo, () => handleGenerateAIImage(promptToUse, forcedStyle));
+        onTriggerQuotaAlert(err.quotaInfo, () => handleGenerateAIImage(promptToUse, forcedStyle, forcedTemplate));
       } else {
         alert(`Image Generation Failed: ${err.message || err}`);
       }
@@ -240,7 +247,7 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
           /* AI Image Generator Form */
           <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
             
-            {/* Style & Engine Controls */}
+            {/* Style, Engine & Archetype Controls */}
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <span className="text-[11px] font-semibold text-slate-400">Layout Format</span>
@@ -261,11 +268,30 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
                   onChange={(e) => setEngineMode(e.target.value as any)}
                   className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold text-emerald-400 focus:outline-none focus:border-emerald-500"
                 >
-                  <option value="procedural">⚡ Vector CAD Engine (100% Crisp)</option>
+                  <option value="procedural">⚡ FICSIT Vector CAD Engine</option>
                   <option value="flux">🎨 FLUX.1 Diffusion Model</option>
                 </select>
               </div>
             </div>
+
+            {/* FICSIT Template Archetype Selector (Section 4 Spec) */}
+            {styleMode === 'infographic' && (
+              <div className="space-y-1">
+                <span className="text-[11px] font-semibold text-slate-400 flex items-center justify-between">
+                  <span>FICSIT Blueprint Archetype (9:16)</span>
+                  <span className="text-[10px] font-mono text-orange-400 font-bold uppercase">v1.0.0 Spec</span>
+                </span>
+                <select
+                  value={templateType}
+                  onChange={(e) => setTemplateType(e.target.value as any)}
+                  className="w-full px-2.5 py-1.5 bg-slate-900 border border-orange-500/40 rounded-xl text-xs font-bold text-orange-300 focus:outline-none focus:border-orange-500"
+                >
+                  <option value="FLOWCHART_CONSOLIDATION">🏭 Template C: Logistics Masterclass (Flowchart)</option>
+                  <option value="COMPARISON">⚖️ Template A: Standard vs. Alternate Stack</option>
+                  <option value="PROBLEM_SOLUTION">🚫 Template B: Problem vs. Solution (Bottleneck)</option>
+                </select>
+              </div>
+            )}
 
             {/* Quick 1-Click Game Presets */}
             {activePresets.length > 0 && (
@@ -281,7 +307,8 @@ export const GamingContextPane: React.FC<GamingContextPaneProps> = ({
                       disabled={isGeneratingImage}
                       onClick={() => {
                         setCustomImagePrompt(preset.prompt);
-                        handleGenerateAIImage(preset.prompt, 'infographic');
+                        if (preset.templateType) setTemplateType(preset.templateType);
+                        handleGenerateAIImage(preset.prompt, 'infographic', preset.templateType || templateType);
                       }}
                       className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-emerald-950/60 border border-slate-800 hover:border-emerald-600/60 text-left text-xs text-slate-300 hover:text-emerald-300 transition-colors flex items-center justify-between gap-2 cursor-pointer group"
                     >

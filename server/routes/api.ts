@@ -200,7 +200,7 @@ apiRouter.get('/image/presets', (req, res) => {
 
 apiRouter.post('/generate/image', async (req, res) => {
   try {
-    const { prompt, gameId, styleMode, enhanceWithAI, engine } = req.body;
+    const { prompt, gameId, styleMode, enhanceWithAI, engine, templateType } = req.body;
     if (!prompt || !prompt.trim()) {
       return res.status(400).json({ error: 'Prompt is required for image generation' });
     }
@@ -211,6 +211,7 @@ apiRouter.post('/generate/image', async (req, res) => {
       styleMode: styleMode || 'infographic',
       enhanceWithAI: enhanceWithAI ?? true,
       engine: engine || (styleMode === 'infographic' ? 'procedural' : 'flux'),
+      templateType: templateType || 'FLOWCHART_CONSOLIDATION',
       aspectRatio: '9:16',
     });
 

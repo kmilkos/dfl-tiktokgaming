@@ -151,12 +151,13 @@ export async function generateGameImage(
   gameId?: string,
   styleMode: 'infographic' | 'cinematic' = 'infographic',
   enhanceWithAI = true,
-  engine: 'procedural' | 'flux' | 'turbo' = 'procedural'
+  engine: 'procedural' | 'flux' | 'turbo' = 'procedural',
+  templateType: 'FLOWCHART_CONSOLIDATION' | 'COMPARISON' | 'PROBLEM_SOLUTION' = 'FLOWCHART_CONSOLIDATION'
 ): Promise<any> {
   const res = await fetch(`${BASE_URL}/generate/image`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, gameId, styleMode, enhanceWithAI, engine }),
+    body: JSON.stringify({ prompt, gameId, styleMode, enhanceWithAI, engine, templateType }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
