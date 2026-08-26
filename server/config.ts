@@ -3,6 +3,8 @@ import path from 'path';
 
 export interface GamingSuiteConfig {
   port: number;
+  omniRouteUrl: string;
+  useOmniRoute: boolean;
   geminiApiKey: string;
   elevenLabsApiKey: string;
   defaultTtsEngine: 'edge-tts' | 'elevenlabs';
@@ -53,6 +55,8 @@ const EXPORT_DIR = '/outer/Downloads/DFLTikTokGaming';
 
 export const DEFAULT_CONFIG: GamingSuiteConfig = {
   port: 4005,
+  omniRouteUrl: 'http://localhost:20128/v1',
+  useOmniRoute: true,
   geminiApiKey: initial.geminiKey,
   elevenLabsApiKey: initial.elevenLabsKey,
   defaultTtsEngine: 'edge-tts',

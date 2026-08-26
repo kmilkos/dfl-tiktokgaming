@@ -149,6 +149,8 @@ export interface VoiceOption {
 
 export interface SystemConfig {
   port: number;
+  omniRouteUrl: string;
+  useOmniRoute: boolean;
   geminiApiKey: string;
   elevenLabsApiKey: string;
   defaultTtsEngine: 'edge-tts' | 'elevenlabs';

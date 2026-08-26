@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import axios from 'axios';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { getConfig } from '../config.js';
 import { ProjectContext, ProjectScript } from '../types.js';
@@ -58,13 +59,8 @@ export async function generateGamingScript(
 ): Promise<{ script: ProjectScript; detectedElements: string[]; visualVibe: string }> {
   const config = getConfig();
   const apiKey = customApiKey || config.geminiApiKey;
-
-  if (!apiKey) {
-    throw new Error('Gemini API key is required. Please set it in Settings.');
-  }
-
   const gameProfile = getGameProfile(context.gameId);
-  const genAI = new GoogleGenerativeAI(apiKey);
+  const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
   const candidateModels = ['gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.1-pro-preview'];
   const genConfig = {
     temperature: 0.85,
@@ -134,35 +130,78 @@ ${context.keyFacts || context.lore || 'Provide the most viral, mind-blowing tric
 
 TARGET AUDIENCE: ${context.audience || 'Gamers, builders, and survival enthusiasts looking for fast actionable guides.'}`;
 
-  const contents: any[] = [];
-  if (screenshotPath && fs.existsSync(screenshotPath)) {
-    const mime = getMimeType(screenshotPath);
-    contents.push(fileToGenerativePart(screenshotPath, mime));
-  }
-  contents.push({ text: `${systemPrompt}\n\n${userPrompt}` });
-
   let responseText = '';
   let lastError: any = null;
 
-  for (const modelName of candidateModels) {
+  // 1. Try OmniRoute Local Gateway Service (Port 20128)
+  const omniUrl = config.omniRouteUrl || 'http://localhost:20128/v1';
+  if (config.useOmniRoute !== false) {
     try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: genConfig,
-      });
-      const response = await model.generateContent(contents);
-      responseText = response.response.text();
-      if (responseText) {
-        break;
+      console.log(`[Scriptcraft] Synthesizing gaming script via OmniRoute (${omniUrl})...`);
+      const userContent: any[] = [{ type: 'text', text: userPrompt }];
+
+      if (screenshotPath && fs.existsSync(screenshotPath)) {
+        const mime = getMimeType(screenshotPath);
+        const base64Data = fs.readFileSync(screenshotPath).toString('base64');
+        userContent.push({
+          type: 'image_url',
+          image_url: { url: `data:${mime};base64,${base64Data}` },
+        });
+      }
+
+      const omniRes = await axios.post(
+        `${omniUrl}/chat/completions`,
+        {
+          model: screenshotPath ? 'auto/best-vision' : 'auto/best-fast',
+          stream: false,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent },
+          ],
+        },
+        { timeout: 25000 }
+      );
+
+      const content = omniRes.data?.choices?.[0]?.message?.content;
+      if (content) {
+        responseText = content;
+        console.log('[Scriptcraft] Successfully synthesized script via OmniRoute!');
       }
     } catch (err: any) {
-      console.warn(`[Gemini API] Failed with model ${modelName}:`, err.message);
+      console.warn(`[Scriptcraft] OmniRoute attempt failed (${err.message}), falling back to direct API...`);
       lastError = err;
     }
   }
 
+  // 2. Fallback to Google Gemini Direct API
+  if (!responseText && apiKey && genAI) {
+    const contents: any[] = [];
+    if (screenshotPath && fs.existsSync(screenshotPath)) {
+      const mime = getMimeType(screenshotPath);
+      contents.push(fileToGenerativePart(screenshotPath, mime));
+    }
+    contents.push({ text: `${systemPrompt}\n\n${userPrompt}` });
+
+    for (const modelName of candidateModels) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: genConfig,
+        });
+        const response = await model.generateContent(contents);
+        responseText = response.response.text();
+        if (responseText) {
+          break;
+        }
+      } catch (err: any) {
+        console.warn(`[Gemini API] Failed with model ${modelName}:`, err.message);
+        lastError = err;
+      }
+    }
+  }
+
   if (!responseText && lastError) {
-    throw new Error(`Gemini generation failed: ${lastError.message || lastError}`);
+    throw new Error(`Generation failed: ${lastError.message || lastError}`);
   }
 
   let parsed: any;

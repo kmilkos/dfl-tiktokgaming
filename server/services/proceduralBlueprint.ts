@@ -165,33 +165,28 @@ export async function synthesizeFicsitDataWithGemini(
   const config = getConfig();
   const game = getGameProfile(gameId);
 
-  if (!config.geminiApiKey) {
-    return synthesizeDeterministicFicsitData(gameId, userTopic, templateType);
-  }
-
   const prompt = `You are the Lead Industrial UI/UX Technical Illustrator and Logistics Systems Architect for FICSIT Inc.
 Generate a structured production infographic payload adhering to the FICSIT Design System (v1.0.0).
 
 STRICT INSTRUCTION:
-Extract and calculate the exact specific items, recipes, machines, and math for the user's topic: "${userTopic}".
-Do NOT output Cast Screws or generic Iron Wire unless the topic is specifically about them!
-Calculate the REAL numbers and ratios for "${userTopic}" in ${game.name}.
+Generate precise, custom technical data specifically and exclusively for the custom user topic: "${userTopic}".
+Do NOT output any default boilerplate or irrelevant recipes. Extract the exact materials, machines, input/output rates, and math for "${userTopic}" in ${game.name}.
 
 Context:
 Game: ${game.name}
-User Topic: "${userTopic}"
+User Custom Topic: "${userTopic}"
 Template Archetype: "${templateType}"
 Key Facts: "${keyFacts || ''}"
 
 Return ONLY valid JSON matching this schema:
 {
-  "infographic_id": "ficsit-generated",
+  "infographic_id": "ficsit-custom",
   "template_type": "${templateType}",
   "aspect_ratio": "9:16",
   "header": {
     "organization": "FICSIT INC.",
     "category": "PRODUCTION GUIDE: ALTERNATE RECIPE",
-    "title": "EXACT TOPIC TITLE IN UPPERCASE",
+    "title": "UPPERCASE CUSTOM TOPIC TITLE",
     "subtitle": "(SUBTITLE CONTEXT IN PARENTHESES)"
   },
   "raw_inputs": [
@@ -236,25 +231,63 @@ Return ONLY valid JSON matching this schema:
   "verdict": "PUNCHY CAPITALIZED FICSIT VERDICT SLOGAN"
 }`;
 
-  try {
-    const res = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${config.geminiApiKey}`,
-      {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json' },
-      },
-      { timeout: 15000 }
-    );
+  // 1. Try Local OmniRoute Gateway Service (Port 20128)
+  const omniUrl = config.omniRouteUrl || 'http://localhost:20128/v1';
+  if (config.useOmniRoute !== false) {
+    try {
+      console.log(`[Procedural] Synthesizing blueprint via OmniRoute (${omniUrl})...`);
+      const omniRes = await axios.post(
+        `${omniUrl}/chat/completions`,
+        {
+          model: 'auto/best-fast',
+          stream: false,
+          messages: [
+            { role: 'system', content: 'You are a technical factory systems architect. Return ONLY a valid JSON object matching the requested schema.' },
+            { role: 'user', content: prompt },
+          ],
+        },
+        { timeout: 20000 }
+      );
 
-    const raw = res.data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!raw) throw new Error('No data returned from Gemini');
-    const parsed = JSON.parse(raw);
-    if (!parsed.header?.title) throw new Error('Invalid JSON structure');
-    return parsed;
-  } catch (err: any) {
-    console.warn(`[Procedural] Gemini synthesis unavailable (${err.message}), using deterministic factory math engine for ${userTopic}...`);
-    return synthesizeDeterministicFicsitData(gameId, userTopic, templateType);
+      const content = omniRes.data?.choices?.[0]?.message?.content;
+      if (content) {
+        const cleaned = content.replace(/```json\s*|\s*```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        if (parsed.header?.title) {
+          console.log(`[Procedural] Successfully synthesized blueprint with OmniRoute!`);
+          return parsed;
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[Procedural] OmniRoute synthesis failed (${err.message}), trying fallback...`);
+    }
   }
+
+  // 2. Try Google Gemini Direct API
+  if (config.geminiApiKey) {
+    try {
+      console.log(`[Procedural] Synthesizing blueprint via Google Gemini Direct API...`);
+      const res = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${config.geminiApiKey}`,
+        {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: 'application/json' },
+        },
+        { timeout: 15000 }
+      );
+
+      const raw = res.data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.header?.title) return parsed;
+      }
+    } catch (err: any) {
+      console.warn(`[Procedural] Google Direct API unavailable (${err.message}), using deterministic engine...`);
+    }
+  }
+
+  // 3. Deterministic Lexical Fallback
+  return synthesizeDeterministicFicsitData(gameId, userTopic, templateType);
 }
 
 export function generateFicsitSVG(data: FicsitInfographicData): string {

@@ -10,6 +10,8 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [config, setConfig] = useState<SystemConfig | null>(null);
+  const [omniRouteUrl, setOmniRouteUrl] = useState('http://localhost:20128/v1');
+  const [useOmniRoute, setUseOmniRoute] = useState(true);
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -19,6 +21,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     if (isOpen) {
       fetchConfig().then((cfg) => {
         setConfig(cfg);
+        setOmniRouteUrl(cfg.omniRouteUrl || 'http://localhost:20128/v1');
+        setUseOmniRoute(cfg.useOmniRoute !== false);
         setGeminiApiKey(cfg.geminiApiKey || '');
         setElevenLabsApiKey(cfg.elevenLabsApiKey || '');
       });
@@ -31,6 +35,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       setIsSaving(true);
       setSaveSuccess(false);
       await saveConfig({
+        omniRouteUrl,
+        useOmniRoute,
         geminiApiKey,
         elevenLabsApiKey,
       });
@@ -70,14 +76,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
         <form onSubmit={handleSave} className="space-y-4">
           
+          {/* OmniRoute Gateway Service */}
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-emerald-500/40 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Local OmniRoute AI Gateway</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Port 20128 Active
+                </span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useOmniRoute}
+                    onChange={(e) => setUseOmniRoute(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+            </div>
+            <input
+              type="text"
+              value={omniRouteUrl}
+              onChange={(e) => setOmniRouteUrl(e.target.value)}
+              placeholder="http://localhost:20128/v1"
+              className="w-full px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-500"
+            />
+            <p className="text-[10px] text-slate-400 font-mono">
+              Routes multimodal vision and fast script generation through your local high-throughput OmniRoute Gateway with zero quota blocks.
+            </p>
+          </div>
+
           {/* Gemini API Key */}
           <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-200 flex items-center gap-2">
                 <Zap className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Google Gemini API Key (Multimodal Vision & Script Synthesis)</span>
+                <span>Google Gemini Direct API Key (Fallback)</span>
               </label>
-              <span className="text-[10px] font-mono text-emerald-400 font-bold">Model: gemini-2.5-flash</span>
+              <span className="text-[10px] font-mono text-slate-400 font-bold">gemini-2.5-flash</span>
             </div>
             <input
               type="password"
@@ -87,7 +128,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-mono text-slate-100 focus:outline-none focus:border-emerald-500"
             />
             <p className="text-[10px] text-slate-500 font-mono">
-              Powers automated game screenshot analysis, inventory detection & viral hook writing.
+              Direct fallback connection when OmniRoute is offline.
             </p>
           </div>
 
